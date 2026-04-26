@@ -82,6 +82,20 @@ body::after {
   overflow: hidden;
 }
 
+/* 보스 씬은 길게 — 사용자가 스크롤할 수록 hp 감소 */
+.scene[data-monster-mode="scroll"] {
+  min-height: 220vh;
+  align-items: flex-start;
+  padding-top: 18vh;
+}
+.scene[data-monster-mode="scroll"][data-final="true"] {
+  min-height: 280vh;  /* 최종 보스는 더 길게 */
+}
+.scene[data-monster-mode="scroll"] .scene__inner {
+  position: sticky;
+  top: 12vh;
+}
+
 /* 던전 돌바닥 패턴 — CSS만으로 */
 .scene::before {
   content: '';
@@ -351,6 +365,11 @@ body::after {
   pointer-events: auto;
   cursor: pointer;
   width: 100px;
+}
+
+.monster--scroll {
+  width: 110px;
+  bottom: 16vh;
 }
 
 .monster--interactive:hover {

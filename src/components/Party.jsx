@@ -1,35 +1,40 @@
 import { forwardRef } from 'react'
 import PixelCharacter from './PixelCharacter'
+import { levelOf } from '../data/scenes'
 
-// 파티 — 여러 동료를 가로로 배치.
-// 새 동료(newAlly)는 합류 애니메이션 적용.
-// moveDirection: 'left' | 'right' | 'up' — 화면 내 이동 방향
+// 파티 — 표시 순서대로 캐릭터 배치 (hero가 가운데 인덱스에 위치).
+// sceneIndex로 각 멤버의 진화 레벨 자동 계산.
+// moveDirection: 'left' | 'right' | 'up'
 
 const Party = forwardRef(function Party(
-  { party, newAlly, moveDirection = 'right' },
+  { party, newAlly, moveDirection = 'right', sceneIndex = 0, attackTrigger = 0 },
   ref
 ) {
-  // 'left'면 캐릭터들이 좌측을 바라보도록 좌우 반전
   const facing = moveDirection === 'left' ? 'flip' : 'normal'
 
   return (
     <div
       ref={ref}
       className={`party party--${moveDirection} party--${facing}`}
+      data-attack={attackTrigger}
       aria-hidden="true"
     >
       {party.map((id, i) => {
         const isNew = id === newAlly
+        const isHero = id === 'hero'
+        const level = levelOf(id, sceneIndex)
         return (
           <div
             key={id}
-            className={`party__member ${isNew ? 'party__member--new' : ''}`}
+            className={`party__member ${isNew ? 'party__member--new' : ''} ${
+              isHero ? 'party__member--hero' : ''
+            }`}
             style={{
               animationDelay: `${i * 0.08}s`,
-              zIndex: party.length - i,
+              zIndex: isHero ? 99 : party.length - i,
             }}
           >
-            <PixelCharacter characterClass={id} />
+            <PixelCharacter characterClass={id} level={level} />
           </div>
         )
       })}

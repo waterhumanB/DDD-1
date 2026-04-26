@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, forwardRef } from 'react'
 
 // 4종 몬스터 픽셀 SVG.
-// shadow: 의심/안개 (auto), slime: 버그 (auto), giant: 거인 보스 (interactive), demon: 마왕 (final)
+// shadow / slime / giant / demon
 
 const ShadowSprite = () => (
   <svg viewBox="0 0 12 12" className="monster__sprite">
@@ -81,36 +81,71 @@ const sprites = {
   demon: DemonSprite,
 }
 
-export default function Monster({ monster, onDefeat }) {
+// Monster — 3가지 mode
+// - 'auto': 자동 컷씬 (1.5초 후 사라짐)
+// - 'interactive': 클릭 또는 SPACE 공격
+// - 'scroll': 외부에서 controlledHp prop으로 hp 제어 (보스 씬 스크롤 진행에 따라)
+const Monster = forwardRef(function Monster(
+  { monster, controlledHp, onDefeat },
+  ref
+) {
   if (!monster) return null
 
   const isInteractive = monster.mode === 'interactive'
+  const isScroll = monster.mode === 'scroll'
   const Sprite = sprites[monster.sprite] || sprites.slime
 
-  const [hp, setHp] = useState(monster.hp)
+  const [internalHp, setInternalHp] = useState(monster.hp)
   const [hits, setHits] = useState([])
   const [defeated, setDefeated] = useState(false)
   const onDefeatRef = useRef(onDefeat)
   onDefeatRef.current = onDefeat
+  const lastHpRef = useRef(monster.hp)
 
-  // 새 몬스터 들어오면 상태 리셋
+  const displayHp = isScroll
+    ? Math.max(0, controlledHp ?? monster.hp)
+    : internalHp
+
+  // 새 몬스터 들어오면 리셋
   useEffect(() => {
-    setHp(monster.hp)
+    setInternalHp(monster.hp)
     setHits([])
     setDefeated(false)
+    lastHpRef.current = monster.hp
   }, [monster])
 
-  // 자동 처치 (auto): 1.5초 후 자동 사라짐
+  // auto 자동 처치
   useEffect(() => {
-    if (isInteractive) return
+    if (isInteractive || isScroll) return
     const t = setTimeout(() => {
       setDefeated(true)
       onDefeatRef.current?.()
     }, 1500)
     return () => clearTimeout(t)
-  }, [monster, isInteractive])
+  }, [monster, isInteractive, isScroll])
 
-  // 키보드 SPACE 공격
+  // scroll: hp가 줄면 데미지 숫자 표시, 0되면 처치
+  useEffect(() => {
+    if (!isScroll) return
+    if (displayHp < lastHpRef.current) {
+      const diff = lastHpRef.current - displayHp
+      if (diff > 0) {
+        const id = `${Date.now()}-${Math.random()}`
+        const offset = Math.random() * 60 - 30
+        setHits((prev) => [...prev, { id, offset, value: diff }])
+        setTimeout(() => {
+          setHits((prev) => prev.filter((h) => h.id !== id))
+        }, 700)
+      }
+    }
+    lastHpRef.current = displayHp
+    if (displayHp <= 0 && !defeated) {
+      setDefeated(true)
+      onDefeatRef.current?.()
+    }
+  }, [isScroll, displayHp, defeated])
+
+  // interactive: 키보드 SPACE
   useEffect(() => {
     if (!isInteractive) return
     const handler = (e) => {
@@ -122,11 +157,11 @@ export default function Monster({ monster, onDefeat }) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInteractive, hp, defeated])
+  }, [isInteractive, internalHp, defeated])
 
   function attack() {
     if (defeated) return
-    setHp((prev) => {
+    setInternalHp((prev) => {
       const next = Math.max(0, prev - 1)
       if (next === 0) {
         setDefeated(true)
@@ -136,37 +171,42 @@ export default function Monster({ monster, onDefeat }) {
     })
     const id = `${Date.now()}-${Math.random()}`
     const offset = Math.random() * 60 - 30
-    setHits((prev) => [...prev, { id, offset }])
+    setHits((prev) => [...prev, { id, offset, value: 1 }])
     setTimeout(() => {
       setHits((prev) => prev.filter((h) => h.id !== id))
     }, 700)
   }
 
-  if (defeated && !isInteractive) return null
+  if (defeated && !isInteractive && !isScroll) return null
 
   return (
     <div
-      className={`monster ${isInteractive ? 'monster--interactive' : 'monster--auto'} ${
-        defeated ? 'monster--defeated' : ''
-      } ${monster.isFinalBoss ? 'monster--boss-final' : ''}`}
+      ref={ref}
+      className={`monster monster--${
+        isInteractive ? 'interactive' : isScroll ? 'scroll' : 'auto'
+      } ${defeated ? 'monster--defeated' : ''} ${
+        monster.isFinalBoss ? 'monster--boss-final' : ''
+      }`}
       onClick={isInteractive ? attack : undefined}
     >
       <div className="monster__sprite-wrap">
         <Sprite />
       </div>
       <div className="monster__name">{monster.name}</div>
-      {isInteractive && !defeated && (
+      {(isInteractive || isScroll) && !defeated && (
         <>
           <div className="monster__hpbar">
             <div
               className="monster__hp"
-              style={{ width: `${(hp / monster.hp) * 100}%` }}
+              style={{ width: `${(displayHp / monster.hp) * 100}%` }}
             />
           </div>
           <div className="monster__hptext">
-            HP {hp} / {monster.hp}
+            HP {Math.max(0, Math.round(displayHp))} / {monster.hp}
           </div>
-          <div className="monster__hint">▶ CLICK or [SPACE]</div>
+          <div className="monster__hint">
+            {isScroll ? '▼ SCROLL TO ATTACK ▼' : '▶ CLICK or [SPACE]'}
+          </div>
         </>
       )}
       {hits.map((h) => (
@@ -175,9 +215,11 @@ export default function Monster({ monster, onDefeat }) {
           className="monster__damage"
           style={{ left: `calc(50% + ${h.offset}px)` }}
         >
-          -1
+          -{h.value}
         </div>
       ))}
     </div>
   )
-}
+})
+
+export default Monster
