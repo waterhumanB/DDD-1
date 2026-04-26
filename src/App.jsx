@@ -41,9 +41,12 @@ export default function App() {
   function handleMonsterDefeat(sceneId) {
     const idx = scenes.findIndex((s) => s.id === sceneId)
     if (idx < 0) return
-    // 처치된 씬의 ScrollTrigger 비활성화 (사용자 자유 스크롤 허용)
+    const scene = scenes[idx]
+    // 자동 진행은 보스 씬(mode === 'scroll')에서만. auto는 자연 흐름 유지.
+    if (scene.monster?.mode !== 'scroll') return
+    // 보스 ScrollTrigger 비활성화 (사용자 자유 스크롤 허용)
     const trigger = monsterTriggersRef.current[sceneId]
-    if (trigger) trigger.disable(true, false)
+    if (trigger) trigger.disable(false, true)
     // 마지막 씬이면 더 진행할 곳 없음
     if (idx >= scenes.length - 1) return
     setTimeout(() => {
@@ -64,14 +67,12 @@ export default function App() {
       })
     })
 
-    // 모든 monster 씬: 진입 시 pin (화면 고정), 처치 전엔 다음 씬으로 못 넘어감
+    // 보스 씬(mode === 'scroll')만 pin + scrub. auto 씬은 자연 흐름.
     const monsterTriggers = []
     scenes.forEach((scene, idx) => {
-      if (!scene.monster) return
+      if (scene.monster?.mode !== 'scroll') return
       const sceneEl = sceneRefs.current[idx]
       if (!sceneEl) return
-
-      const isScroll = scene.monster.mode === 'scroll'
 
       const trigger = ScrollTrigger.create({
         trigger: sceneEl,
@@ -79,33 +80,34 @@ export default function App() {
         end: 'bottom bottom',
         pin: true,
         pinSpacing: true,
-        scrub: isScroll ? 0.4 : false,
-        onUpdate: isScroll
-          ? (self) => {
-              const maxSoFar = Math.max(
-                maxProgressRef.current[scene.id] ?? 0,
-                self.progress
-              )
-              maxProgressRef.current[scene.id] = maxSoFar
-              const newHp = Math.max(
-                0,
-                Math.round(scene.monster.hp * (1 - maxSoFar) * 100) / 100
-              )
-              const last = lastBossHpRef.current[scene.id] ?? scene.monster.hp
-              if (Math.floor(last) !== Math.floor(newHp) && newHp < last) {
-                setAttackTrigger((p) => p + 1)
-              }
-              lastBossHpRef.current[scene.id] = newHp
-              setBossHpMap((prev) => {
-                if (prev[scene.id] === newHp) return prev
-                return { ...prev, [scene.id]: newHp }
-              })
-            }
-          : undefined,
+        scrub: 0.4,
+        onUpdate: (self) => {
+          const maxSoFar = Math.max(
+            maxProgressRef.current[scene.id] ?? 0,
+            self.progress
+          )
+          maxProgressRef.current[scene.id] = maxSoFar
+          const newHp = Math.max(
+            0,
+            Math.round(scene.monster.hp * (1 - maxSoFar) * 100) / 100
+          )
+          const last = lastBossHpRef.current[scene.id] ?? scene.monster.hp
+          if (Math.floor(last) !== Math.floor(newHp) && newHp < last) {
+            setAttackTrigger((p) => p + 1)
+          }
+          lastBossHpRef.current[scene.id] = newHp
+          setBossHpMap((prev) => {
+            if (prev[scene.id] === newHp) return prev
+            return { ...prev, [scene.id]: newHp }
+          })
+        },
       })
       monsterTriggers.push(trigger)
       monsterTriggersRef.current[scene.id] = trigger
     })
+
+    // 레이아웃 변경 후 ScrollTrigger 위치 재계산
+    ScrollTrigger.refresh()
 
     const onScroll = () => {
       if (window.scrollY > 80) setHasScrolled(true)

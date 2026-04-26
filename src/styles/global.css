@@ -82,12 +82,7 @@ body::after {
   overflow: hidden;
 }
 
-/* 자동 처치 씬 — 1.5초 컷씬 동안 화면이 머물 정도 */
-.scene[data-monster-mode="auto"] {
-  min-height: 130vh;
-}
-
-/* 보스 씬 — 스크롤해야 hp 감소. hp가 클수록 더 길게 */
+/* 보스 씬만 길게 — 스크롤해야 hp 감소. 다른 씬은 기본 100vh */
 .scene[data-monster-mode="scroll"] {
   min-height: 200vh;
 }
