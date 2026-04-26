@@ -475,6 +475,46 @@ body::after {
 }
 
 /* ────────────────────────────────────────
+   슬래시 이펙트 — 보스 공격 시 화면에 잠시 나타나는 검광
+──────────────────────────────────────── */
+.slash-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+
+.slash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 14px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.0) 10%,
+    rgba(255, 255, 255, 0.95) 45%,
+    rgba(255, 213, 74, 1) 50%,
+    rgba(255, 255, 255, 0.95) 55%,
+    rgba(255, 255, 255, 0) 90%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  filter: blur(0.5px) drop-shadow(0 0 12px #ffd54a);
+  animation: slash-flash 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform-origin: center;
+  mix-blend-mode: screen;
+}
+
+@keyframes slash-flash {
+  0%   { opacity: 0;   transform: translate(-50%, -50%) rotate(var(--angle, -20deg)) scaleX(0.1); }
+  20%  { opacity: 1;   transform: translate(-50%, -50%) rotate(var(--angle, -20deg)) scaleX(1.2); }
+  60%  { opacity: 0.9; transform: translate(-50%, -50%) rotate(var(--angle, -20deg)) scaleX(1); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) rotate(var(--angle, -20deg)) scaleX(1); }
+}
+
+/* ────────────────────────────────────────
    HUD — RPG 게임 상단 진행도
 ──────────────────────────────────────── */
 .hud {
