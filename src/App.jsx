@@ -3,13 +3,14 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { scenes } from './data/scenes'
 import Scene from './components/Scene'
-import Character from './components/Character'
+import Party from './components/Party'
+import Monster from './components/Monster'
 
 gsap.registerPlugin(ScrollTrigger)
 
 export default function App() {
   const sceneRefs = useRef([])
-  const characterRef = useRef(null)
+  const partyRef = useRef(null)
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
 
@@ -18,8 +19,8 @@ export default function App() {
       if (!sceneEl) return null
       return ScrollTrigger.create({
         trigger: sceneEl,
-        start: 'top 60%',
-        end: 'bottom 40%',
+        start: 'top 65%',
+        end: 'bottom 35%',
         onEnter: () => setCurrentSceneIndex(idx),
         onEnterBack: () => setCurrentSceneIndex(idx),
       })
@@ -36,17 +37,16 @@ export default function App() {
     }
   }, [])
 
-  // 씬이 바뀔 때 캐릭터 점프 애니메이션 (전직 이펙트)
+  // 씬 변경 시 파티 점프 (전직 → 합류 이벤트)
   useEffect(() => {
-    if (!characterRef.current) return
+    if (!partyRef.current) return
     gsap.fromTo(
-      characterRef.current,
-      { y: 0, scale: 1, rotation: 0 },
+      partyRef.current,
+      { y: 0 },
       {
         keyframes: [
-          { y: -50, scale: 1.15, rotation: -5, duration: 0.18 },
-          { y: -70, scale: 1.25, rotation: 5, duration: 0.12 },
-          { y: 0, scale: 1, rotation: 0, duration: 0.25, ease: 'bounce.out' },
+          { y: -28, duration: 0.18 },
+          { y: 0, duration: 0.28, ease: 'bounce.out' },
         ],
       }
     )
@@ -63,10 +63,13 @@ export default function App() {
         </span>
       </div>
 
-      <Character
-        ref={characterRef}
-        characterClass={currentScene.characterClass}
+      <Party
+        ref={partyRef}
+        party={currentScene.party}
+        newAlly={currentScene.newAlly}
+        moveDirection={currentScene.moveDirection}
       />
+      <Monster monster={currentScene.monster} />
 
       <main>
         {scenes.map((scene, idx) => (
