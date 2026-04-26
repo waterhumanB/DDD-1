@@ -82,18 +82,17 @@ body::after {
   overflow: hidden;
 }
 
-/* 보스 씬은 길게 — 사용자가 스크롤할 수록 hp 감소 */
+/* 자동 처치 씬 — 1.5초 컷씬 동안 화면이 머물 정도 */
+.scene[data-monster-mode="auto"] {
+  min-height: 130vh;
+}
+
+/* 보스 씬 — 스크롤해야 hp 감소. hp가 클수록 더 길게 */
 .scene[data-monster-mode="scroll"] {
-  min-height: 220vh;
-  align-items: flex-start;
-  padding-top: 18vh;
+  min-height: 200vh;
 }
 .scene[data-monster-mode="scroll"][data-final="true"] {
-  min-height: 280vh;  /* 최종 보스는 더 길게 */
-}
-.scene[data-monster-mode="scroll"] .scene__inner {
-  position: sticky;
-  top: 12vh;
+  min-height: 320vh;
 }
 
 /* 던전 돌바닥 패턴 — CSS만으로 */

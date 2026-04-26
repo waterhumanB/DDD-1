@@ -1,27 +1,58 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 import { scenes } from './data/scenes'
 import Scene from './components/Scene'
 import Party from './components/Party'
 import Monster from './components/Monster'
 
-gsap.registerPlugin(ScrollTrigger)
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
 
 export default function App() {
   const sceneRefs = useRef([])
   const partyRef = useRef(null)
   const monsterRef = useRef(null)
+  const monsterTriggersRef = useRef({})
 
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [bossHpMap, setBossHpMap] = useState({})
   const lastBossHpRef = useRef({})
-  const maxProgressRef = useRef({}) // 보스 hp 단방향 감소를 위한 최대 progress 추적
+  const maxProgressRef = useRef({})
   const [attackTrigger, setAttackTrigger] = useState(0)
   const [slashes, setSlashes] = useState([])
+  const isAutoScrollingRef = useRef(false)
+
+  function scrollToSceneIndex(idx) {
+    const sceneEl = sceneRefs.current[idx]
+    if (!sceneEl) return
+    isAutoScrollingRef.current = true
+    gsap.to(window, {
+      scrollTo: { y: sceneEl, offsetY: 0, autoKill: true },
+      duration: 1.0,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        isAutoScrollingRef.current = false
+      },
+    })
+  }
+
+  function handleMonsterDefeat(sceneId) {
+    const idx = scenes.findIndex((s) => s.id === sceneId)
+    if (idx < 0) return
+    // 처치된 씬의 ScrollTrigger 비활성화 (사용자 자유 스크롤 허용)
+    const trigger = monsterTriggersRef.current[sceneId]
+    if (trigger) trigger.disable(true, false)
+    // 마지막 씬이면 더 진행할 곳 없음
+    if (idx >= scenes.length - 1) return
+    setTimeout(() => {
+      scrollToSceneIndex(idx + 1)
+    }, 700)
+  }
 
   useEffect(() => {
+    // 씬 진입 인덱스 추적
     const enterTriggers = sceneRefs.current.map((sceneEl, idx) => {
       if (!sceneEl) return null
       return ScrollTrigger.create({
@@ -33,43 +64,48 @@ export default function App() {
       })
     })
 
-    // 보스 씬: pin + scrub. 스크롤이 멈추고 progress가 공격으로 변환됨
-    const bossTriggers = scenes
-      .map((scene, idx) => {
-        if (scene.monster?.mode !== 'scroll') return null
-        const sceneEl = sceneRefs.current[idx]
-        if (!sceneEl) return null
-        return ScrollTrigger.create({
-          trigger: sceneEl,
-          start: 'top top',
-          end: 'bottom bottom',
-          pin: '.scene__inner',
-          pinSpacing: false,
-          scrub: 0.4,
-          onUpdate: (self) => {
-            // 단방향 progress (위로 스크롤해도 hp 회복 안 됨)
-            const maxSoFar = Math.max(
-              maxProgressRef.current[scene.id] ?? 0,
-              self.progress
-            )
-            maxProgressRef.current[scene.id] = maxSoFar
-            const newHp = Math.max(
-              0,
-              Math.round(scene.monster.hp * (1 - maxSoFar) * 100) / 100
-            )
-            const last = lastBossHpRef.current[scene.id] ?? scene.monster.hp
-            if (Math.floor(last) !== Math.floor(newHp) && newHp < last) {
-              setAttackTrigger((p) => p + 1)
+    // 모든 monster 씬: 진입 시 pin (화면 고정), 처치 전엔 다음 씬으로 못 넘어감
+    const monsterTriggers = []
+    scenes.forEach((scene, idx) => {
+      if (!scene.monster) return
+      const sceneEl = sceneRefs.current[idx]
+      if (!sceneEl) return
+
+      const isScroll = scene.monster.mode === 'scroll'
+
+      const trigger = ScrollTrigger.create({
+        trigger: sceneEl,
+        start: 'top top',
+        end: 'bottom bottom',
+        pin: true,
+        pinSpacing: true,
+        scrub: isScroll ? 0.4 : false,
+        onUpdate: isScroll
+          ? (self) => {
+              const maxSoFar = Math.max(
+                maxProgressRef.current[scene.id] ?? 0,
+                self.progress
+              )
+              maxProgressRef.current[scene.id] = maxSoFar
+              const newHp = Math.max(
+                0,
+                Math.round(scene.monster.hp * (1 - maxSoFar) * 100) / 100
+              )
+              const last = lastBossHpRef.current[scene.id] ?? scene.monster.hp
+              if (Math.floor(last) !== Math.floor(newHp) && newHp < last) {
+                setAttackTrigger((p) => p + 1)
+              }
+              lastBossHpRef.current[scene.id] = newHp
+              setBossHpMap((prev) => {
+                if (prev[scene.id] === newHp) return prev
+                return { ...prev, [scene.id]: newHp }
+              })
             }
-            lastBossHpRef.current[scene.id] = newHp
-            setBossHpMap((prev) => {
-              if (prev[scene.id] === newHp) return prev
-              return { ...prev, [scene.id]: newHp }
-            })
-          },
-        })
+          : undefined,
       })
-      .filter(Boolean)
+      monsterTriggers.push(trigger)
+      monsterTriggersRef.current[scene.id] = trigger
+    })
 
     const onScroll = () => {
       if (window.scrollY > 80) setHasScrolled(true)
@@ -78,7 +114,8 @@ export default function App() {
 
     return () => {
       enterTriggers.forEach((t) => t && t.kill())
-      bossTriggers.forEach((t) => t && t.kill())
+      monsterTriggers.forEach((t) => t && t.kill())
+      monsterTriggersRef.current = {}
       window.removeEventListener('scroll', onScroll)
     }
   }, [])
@@ -98,11 +135,10 @@ export default function App() {
     )
   }, [currentSceneIndex])
 
-  // 공격 모션 — hero 도약 슬래시 + 보스 흔들림 + 화면 진동 + 슬래시 이펙트
+  // 공격 모션 — hero 도약 + 보스 흔들림 + 화면 진동 + 슬래시
   useEffect(() => {
     if (attackTrigger === 0) return
 
-    // hero 도약하며 검 휘두름
     if (partyRef.current) {
       const hero = partyRef.current.querySelector('.party__member--hero')
       if (hero) {
@@ -121,7 +157,6 @@ export default function App() {
       }
     }
 
-    // 보스 흔들림 (강하게)
     if (monsterRef.current) {
       gsap.fromTo(
         monsterRef.current,
@@ -138,7 +173,6 @@ export default function App() {
       )
     }
 
-    // 화면 진동
     gsap.fromTo(
       document.body,
       { x: 0, y: 0 },
@@ -152,7 +186,6 @@ export default function App() {
       }
     )
 
-    // 슬래시 이펙트 추가
     const id = `${Date.now()}-${Math.random()}`
     const angle = -25 + Math.random() * 50
     setSlashes((prev) => [...prev, { id, angle }])
@@ -188,9 +221,9 @@ export default function App() {
         ref={monsterRef}
         monster={currentScene.monster}
         controlledHp={currentBossHp}
+        onDefeat={() => handleMonsterDefeat(currentScene.id)}
       />
 
-      {/* 슬래시 이펙트 — 보스 공격 시 잠시 표시 */}
       <div className="slash-layer" aria-hidden="true">
         {slashes.map((s) => (
           <div
