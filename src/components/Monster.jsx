@@ -86,7 +86,7 @@ const sprites = {
 // - 'interactive': 클릭 또는 SPACE 공격
 // - 'scroll': 외부에서 controlledHp prop으로 hp 제어 (보스 씬 스크롤 진행에 따라)
 const Monster = forwardRef(function Monster(
-  { monster, controlledHp, onDefeat },
+  { monster, controlledHp, onDefeat, isCombatActive = false },
   ref
 ) {
   if (!monster) return null
@@ -184,7 +184,9 @@ const Monster = forwardRef(function Monster(
       ref={ref}
       className={`monster monster--${
         isInteractive ? 'interactive' : isScroll ? 'scroll' : 'auto'
-      } ${defeated ? 'monster--defeated' : ''} ${
+      } ${isCombatActive ? 'monster--combat' : ''} ${
+        defeated ? 'monster--defeated' : ''
+      } ${
         monster.isFinalBoss ? 'monster--boss-final' : ''
       }`}
       onClick={isInteractive ? attack : undefined}
@@ -205,7 +207,11 @@ const Monster = forwardRef(function Monster(
             HP {Math.max(0, Math.round(displayHp))} / {monster.hp}
           </div>
           <div className="monster__hint">
-            {isScroll ? '▼ SCROLL TO ATTACK ▼' : '▶ CLICK or [SPACE]'}
+            {isScroll
+              ? isCombatActive
+                ? '▼ SCROLL + TAP TO STRIKE ▼'
+                : '▼ SCROLL TO ATTACK ▼'
+              : '▶ CLICK or [SPACE]'}
           </div>
         </>
       )}

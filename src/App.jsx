@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import confetti from 'canvas-confetti'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 import { scenes } from './data/scenes'
+import { getBossHpFromProgress, getBossScrollDistance } from './lib/bossScene'
 import Scene from './components/Scene'
 import Party from './components/Party'
 import Monster from './components/Monster'
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
+
+const COMBAT_COLORS = ['#fff7c2', '#ffd54a', '#ff5577', '#8aa9ff', '#6bff9a']
+const IMPACT_WORDS = ['SLASH', 'CRITICAL', 'BREAK', 'COMBO']
 
 export default function App() {
   const sceneRefs = useRef([])
@@ -20,9 +25,27 @@ export default function App() {
   const [bossHpMap, setBossHpMap] = useState({})
   const lastBossHpRef = useRef({})
   const maxProgressRef = useRef({})
+  const activeBossSceneIdRef = useRef(null)
+  const defeatedBossesRef = useRef({})
+  const [activeCombatSceneId, setActiveCombatSceneId] = useState(null)
   const [attackTrigger, setAttackTrigger] = useState(0)
   const [slashes, setSlashes] = useState([])
+  const [impactWords, setImpactWords] = useState([])
+  const [combatBolts, setCombatBolts] = useState([])
   const isAutoScrollingRef = useRef(false)
+  const lastManualStrikeRef = useRef(0)
+
+  function setActiveBossScene(sceneId) {
+    activeBossSceneIdRef.current = sceneId
+    setActiveCombatSceneId(sceneId)
+  }
+
+  function triggerCombatFlourish() {
+    const now = Date.now()
+    if (now - lastManualStrikeRef.current < 240) return
+    lastManualStrikeRef.current = now
+    setAttackTrigger((p) => p + 1)
+  }
 
   function scrollToSceneIndex(idx) {
     const sceneEl = sceneRefs.current[idx]
@@ -39,11 +62,15 @@ export default function App() {
   }
 
   function handleMonsterDefeat(sceneId) {
+    if (defeatedBossesRef.current[sceneId]) return
+
     const idx = scenes.findIndex((s) => s.id === sceneId)
     if (idx < 0) return
     const scene = scenes[idx]
     // 자동 진행은 보스 씬(mode === 'scroll')에서만. auto는 자연 흐름 유지.
     if (scene.monster?.mode !== 'scroll') return
+    defeatedBossesRef.current[sceneId] = true
+    setActiveBossScene(null)
     // 보스 ScrollTrigger 비활성화 (사용자 자유 스크롤 허용)
     const trigger = monsterTriggersRef.current[sceneId]
     if (trigger) trigger.disable(false, true)
@@ -62,8 +89,16 @@ export default function App() {
         trigger: sceneEl,
         start: 'top 65%',
         end: 'bottom 35%',
-        onEnter: () => setCurrentSceneIndex(idx),
-        onEnterBack: () => setCurrentSceneIndex(idx),
+        onEnter: () => {
+          const activeBossSceneId = activeBossSceneIdRef.current
+          if (activeBossSceneId && activeBossSceneId !== scenes[idx].id) return
+          setCurrentSceneIndex(idx)
+        },
+        onEnterBack: () => {
+          const activeBossSceneId = activeBossSceneIdRef.current
+          if (activeBossSceneId && activeBossSceneId !== scenes[idx].id) return
+          setCurrentSceneIndex(idx)
+        },
       })
     })
 
@@ -77,22 +112,39 @@ export default function App() {
       const trigger = ScrollTrigger.create({
         trigger: sceneEl,
         start: 'top top',
-        end: 'bottom bottom',
+        end: () => `+=${getBossScrollDistance(scene.monster.hp, window.innerHeight)}`,
         pin: true,
         pinSpacing: true,
-        scrub: 0.4,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        scrub: true,
+        onEnter: () => {
+          setActiveBossScene(scene.id)
+          setCurrentSceneIndex(idx)
+        },
+        onEnterBack: () => {
+          setActiveBossScene(scene.id)
+          setCurrentSceneIndex(idx)
+        },
+        onLeave: () => {
+          if (activeBossSceneIdRef.current === scene.id) {
+            setActiveBossScene(null)
+          }
+        },
+        onLeaveBack: () => {
+          if (activeBossSceneIdRef.current === scene.id) {
+            setActiveBossScene(null)
+          }
+        },
         onUpdate: (self) => {
           const maxSoFar = Math.max(
             maxProgressRef.current[scene.id] ?? 0,
             self.progress
           )
           maxProgressRef.current[scene.id] = maxSoFar
-          const newHp = Math.max(
-            0,
-            Math.round(scene.monster.hp * (1 - maxSoFar) * 100) / 100
-          )
+          const newHp = getBossHpFromProgress(scene.monster.hp, maxSoFar)
           const last = lastBossHpRef.current[scene.id] ?? scene.monster.hp
-          if (Math.floor(last) !== Math.floor(newHp) && newHp < last) {
+          if (last !== newHp && newHp < last) {
             setAttackTrigger((p) => p + 1)
           }
           lastBossHpRef.current[scene.id] = newHp
@@ -108,6 +160,11 @@ export default function App() {
 
     // 레이아웃 변경 후 ScrollTrigger 위치 재계산
     ScrollTrigger.refresh()
+    // 픽셀 폰트(Press Start 2P/VT323/Noto Sans KR)는 늦게 로드돼 씬 높이를 바꿈 →
+    // pin start/end 좌표가 어긋남. 폰트 준비되면 한 번 더 재계산.
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => ScrollTrigger.refresh())
+    }
 
     const onScroll = () => {
       if (window.scrollY > 80) setHasScrolled(true)
@@ -121,6 +178,9 @@ export default function App() {
       window.removeEventListener('scroll', onScroll)
     }
   }, [])
+
+  const currentScene = scenes[currentSceneIndex]
+  const isCombatActive = Boolean(activeCombatSceneId)
 
   // 씬 변경 시 파티 점프
   useEffect(() => {
@@ -137,26 +197,92 @@ export default function App() {
     )
   }, [currentSceneIndex])
 
+  useEffect(() => {
+    if (!isCombatActive) return
+
+    const onPointerDown = (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return
+      triggerCombatFlourish()
+    }
+    const onKeyDown = (event) => {
+      if (event.code !== 'Space' && event.code !== 'Enter') return
+      event.preventDefault()
+      triggerCombatFlourish()
+    }
+
+    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isCombatActive])
+
   // 공격 모션 — hero 도약 + 보스 흔들림 + 화면 진동 + 슬래시
   useEffect(() => {
     if (attackTrigger === 0) return
 
+    if (isCombatActive) {
+      confetti({
+        particleCount: 84,
+        angle: 138,
+        spread: 72,
+        startVelocity: 58,
+        decay: 0.86,
+        gravity: 0.78,
+        ticks: 86,
+        scalar: 1.15,
+        origin: { x: 0.76, y: 0.58 },
+        colors: COMBAT_COLORS,
+        shapes: ['star', 'square'],
+        zIndex: 720,
+        disableForReducedMotion: true,
+      })
+      confetti({
+        particleCount: 44,
+        angle: 38,
+        spread: 58,
+        startVelocity: 46,
+        decay: 0.88,
+        gravity: 0.72,
+        ticks: 72,
+        scalar: 0.92,
+        origin: { x: 0.43, y: 0.7 },
+        colors: COMBAT_COLORS,
+        shapes: ['circle', 'square'],
+        zIndex: 720,
+        disableForReducedMotion: true,
+      })
+    }
+
     if (partyRef.current) {
-      const hero = partyRef.current.querySelector('.party__member--hero')
-      if (hero) {
+      const members = Array.from(partyRef.current.querySelectorAll('.party__member'))
+      members.forEach((member, index) => {
+        const isHero = member.classList.contains('party__member--hero')
+        const direction = index % 2 === 0 ? -1 : 1
+        const delay = isHero ? 0 : 0.03 + index * 0.035
+
+        gsap.killTweensOf(member)
         gsap.fromTo(
-          hero,
+          member,
           { x: 0, y: 0, rotation: 0, scale: 1 },
           {
-            keyframes: [
-              { x: 60, y: -50, rotation: -25, scale: 1.15, duration: 0.12 },
-              { x: 80, y: -30, rotation: 25, scale: 1.1, duration: 0.08 },
-              { x: 40, y: -10, rotation: 10, scale: 1.05, duration: 0.1 },
-              { x: 0, y: 0, rotation: 0, scale: 1, duration: 0.14, ease: 'power2.out' },
-            ],
+            delay,
+            keyframes: isHero
+              ? [
+                  { x: 82, y: -64, rotation: -28, scale: 1.2, duration: 0.12 },
+                  { x: 112, y: -34, rotation: 24, scale: 1.16, duration: 0.08 },
+                  { x: 52, y: -16, rotation: 8, scale: 1.08, duration: 0.1 },
+                  { x: 0, y: 0, rotation: 0, scale: 1, duration: 0.16, ease: 'power2.out' },
+                ]
+              : [
+                  { x: 22, y: -22, rotation: direction * 8, scale: 1.12, duration: 0.11 },
+                  { x: 34, y: -8, rotation: direction * -6, scale: 1.08, duration: 0.08 },
+                  { x: 0, y: 0, rotation: 0, scale: 1, duration: 0.18, ease: 'back.out(1.8)' },
+                ],
           }
         )
-      }
+      })
     }
 
     if (monsterRef.current) {
@@ -175,35 +301,43 @@ export default function App() {
       )
     }
 
-    gsap.fromTo(
-      document.body,
-      { x: 0, y: 0 },
-      {
-        keyframes: [
-          { x: -4, y: 2, duration: 0.04 },
-          { x: 4, y: -2, duration: 0.04 },
-          { x: -2, y: 1, duration: 0.04 },
-          { x: 0, y: 0, duration: 0.06 },
-        ],
-      }
-    )
-
     const id = `${Date.now()}-${Math.random()}`
-    const angle = -25 + Math.random() * 50
-    setSlashes((prev) => [...prev, { id, angle }])
+    const angle = -28 + Math.random() * 56
+    const top = 42 + Math.random() * 18
+    const left = 50 + Math.random() * 18
+    const boltId = `bolt-${id}`
+    const supportBoltId = `support-${id}`
+    setSlashes((prev) => [...prev, { id, angle, top, left }])
+    setCombatBolts((prev) => [
+      ...prev,
+      { id: boltId, top: 60 + Math.random() * 11, delay: 0, color: '#ffd54a' },
+      { id: supportBoltId, top: 51 + Math.random() * 12, delay: 0.08, color: '#8aa9ff' },
+    ])
+    setImpactWords((prev) => [
+      ...prev,
+      {
+        id,
+        text: IMPACT_WORDS[Math.floor(Math.random() * IMPACT_WORDS.length)],
+        top: 22 + Math.random() * 16,
+        left: 46 + Math.random() * 18,
+      },
+    ])
     setTimeout(() => {
       setSlashes((prev) => prev.filter((s) => s.id !== id))
+      setImpactWords((prev) => prev.filter((w) => w.id !== id))
+      setCombatBolts((prev) =>
+        prev.filter((bolt) => bolt.id !== boltId && bolt.id !== supportBoltId)
+      )
     }, 500)
-  }, [attackTrigger])
+  }, [attackTrigger, isCombatActive])
 
-  const currentScene = scenes[currentSceneIndex]
   const currentBossHp =
     currentScene.monster?.mode === 'scroll'
       ? bossHpMap[currentScene.id] ?? currentScene.monster.hp
       : undefined
 
   return (
-    <>
+    <div className={`app-shell ${isCombatActive ? 'app-shell--combat' : ''}`}>
       <div className="hud">
         <span className="hud__panel">QUEST LOG</span>
         <span className="hud__panel">
@@ -218,12 +352,22 @@ export default function App() {
         moveDirection={currentScene.moveDirection}
         sceneIndex={currentSceneIndex}
         attackTrigger={attackTrigger}
+        isCombatActive={isCombatActive}
       />
       <Monster
         ref={monsterRef}
         monster={currentScene.monster}
         controlledHp={currentBossHp}
         onDefeat={() => handleMonsterDefeat(currentScene.id)}
+        isCombatActive={isCombatActive}
+      />
+
+      <div
+        key={`battle-${attackTrigger}`}
+        className={`battle-overlay ${isCombatActive ? 'is-active' : ''} ${
+          attackTrigger > 0 ? 'is-impact' : ''
+        }`}
+        aria-hidden="true"
       />
 
       <div className="slash-layer" aria-hidden="true">
@@ -231,7 +375,34 @@ export default function App() {
           <div
             key={s.id}
             className="slash"
-            style={{ transform: `translate(-50%, -50%) rotate(${s.angle}deg)` }}
+            style={{
+              '--angle': `${s.angle}deg`,
+              left: `${s.left}%`,
+              top: `${s.top}%`,
+            }}
+          />
+        ))}
+        {impactWords.map((word) => (
+          <div
+            key={word.id}
+            className="impact-word"
+            style={{
+              left: `${word.left}%`,
+              top: `${word.top}%`,
+            }}
+          >
+            {word.text}
+          </div>
+        ))}
+        {combatBolts.map((bolt) => (
+          <div
+            key={bolt.id}
+            className="combat-bolt"
+            style={{
+              '--bolt-color': bolt.color,
+              '--bolt-delay': `${bolt.delay}s`,
+              top: `${bolt.top}%`,
+            }}
           />
         ))}
       </div>
@@ -243,6 +414,7 @@ export default function App() {
             ref={(el) => (sceneRefs.current[idx] = el)}
             scene={scene}
             index={idx}
+            isCombatActive={activeCombatSceneId === scene.id}
           />
         ))}
       </main>
@@ -250,6 +422,6 @@ export default function App() {
       <div className={`scroll-hint ${hasScrolled ? 'is-hidden' : ''}`}>
         ▼ SCROLL TO START ▼
       </div>
-    </>
+    </div>
   )
 }

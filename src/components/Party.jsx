@@ -7,7 +7,14 @@ import { levelOf } from '../data/scenes'
 // moveDirection: 'left' | 'right' | 'up'
 
 const Party = forwardRef(function Party(
-  { party, newAlly, moveDirection = 'right', sceneIndex = 0, attackTrigger = 0 },
+  {
+    party,
+    newAlly,
+    moveDirection = 'right',
+    sceneIndex = 0,
+    attackTrigger = 0,
+    isCombatActive = false,
+  },
   ref
 ) {
   const facing = moveDirection === 'left' ? 'flip' : 'normal'
@@ -15,7 +22,9 @@ const Party = forwardRef(function Party(
   return (
     <div
       ref={ref}
-      className={`party party--${moveDirection} party--${facing}`}
+      className={`party party--${moveDirection} party--${facing} ${
+        isCombatActive ? 'party--combat' : ''
+      }`}
       data-attack={attackTrigger}
       aria-hidden="true"
     >
@@ -29,6 +38,8 @@ const Party = forwardRef(function Party(
             className={`party__member ${isNew ? 'party__member--new' : ''} ${
               isHero ? 'party__member--hero' : ''
             }`}
+            data-member={id}
+            data-party-index={i}
             style={{
               animationDelay: `${i * 0.08}s`,
               zIndex: isHero ? 99 : party.length - i,
