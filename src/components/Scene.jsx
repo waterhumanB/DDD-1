@@ -16,7 +16,6 @@ const Scene = forwardRef(function Scene({ scene, index, isCombatActive = false }
       <SceneDecor sceneId={scene.id} />
       {scene.monster?.mode === 'scroll' && (
         <div className="scene__battle-stage" aria-hidden="true">
-          <div className="scene__battle-moon" />
           <div className="scene__battle-floor" />
         </div>
       )}

@@ -1,17 +1,20 @@
-const BOSS_SCROLL_SCREENS_PER_HP = 0.75
+const MIN_BOSS_PIN_DISTANCE = 1
 
-export function getBossScrollDistance(maxHp, viewportHeight) {
-  const safeHp = Math.max(1, Number(maxHp) || 1)
+export function getBossPinDistance(viewportHeight) {
   const safeViewportHeight = Math.max(1, Number(viewportHeight) || 0)
 
-  return Math.round(safeHp * safeViewportHeight * BOSS_SCROLL_SCREENS_PER_HP)
+  return Math.max(MIN_BOSS_PIN_DISTANCE, Math.round(safeViewportHeight))
 }
 
-export function getBossHpFromProgress(maxHp, progress) {
-  const safeHp = Math.max(1, Math.round(Number(maxHp) || 1))
-  const clampedProgress = Math.min(1, Math.max(0, Number(progress) || 0))
-  const lostHp = Math.min(safeHp, Math.floor(clampedProgress * safeHp + 1e-9))
+export function shouldLockBossScroll(
+  sceneId,
+  completedBosses = {},
+  hpByScene = {},
+  fallbackHp = 0
+) {
+  if (!sceneId) return false
+  if (completedBosses?.[sceneId]) return false
 
-  return Math.max(0, safeHp - lostHp)
+  const hp = Number(hpByScene?.[sceneId] ?? fallbackHp)
+  return hp > 0
 }
-
