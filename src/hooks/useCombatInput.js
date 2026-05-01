@@ -11,6 +11,8 @@ export function useCombatInput(isActive, onAttack) {
     const onPointerDown = (event) => {
       if (!isCoarsePointer()) return
       if (event.pointerType === 'mouse') return
+      const target = event.target
+      if (target?.closest?.('button, a, input, textarea, [data-nav-skip="true"]')) return
       onAttack()
     }
     const onKeyDown = (event) => {

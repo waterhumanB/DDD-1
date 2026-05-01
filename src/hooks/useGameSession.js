@@ -1,78 +1,26 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import gsap from 'gsap'
-import { shouldLockBossScroll } from '../lib/bossScene.js'
-import {
-  clearScrollLock,
-  lockScrollAt,
-  restoreLockedScroll as restoreLockedScrollHelper,
-} from '../lib/scrollLock.js'
 
-export function useGameSession(scenes, { partyRef, monsterRef, onCombatReset }) {
-  const sceneRefs = useRef([])
+export function useGameSession({ partyRef, monsterRef, onCombatReset }) {
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0)
   const [bossHpMap, setBossHpMap] = useState({})
   const [clearedMonsterMap, setClearedMonsterMap] = useState({})
   const [activeCombatSceneId, setActiveCombatSceneId] = useState(null)
   const [attackTrigger, setAttackTrigger] = useState(0)
-  const [hasScrolled, setHasScrolled] = useState(false)
 
   const lastBossHpRef = useRef({})
-  const activeBossSceneIdRef = useRef(null)
-  const lockedScrollYRef = useRef(null)
-  const clearedMonstersRef = useRef({})
   const completedBossesRef = useRef({})
-  const monsterTriggersRef = useRef({})
+  const clearedMonstersRef = useRef({})
   const isFinisherRef = useRef(false)
   const lastManualStrikeRef = useRef(0)
-  const autoScrollTweenRef = useRef(null)
-  const autoAdvanceTimeoutRef = useRef(null)
   const cleanupTimeoutsRef = useRef(new Set())
-
-  const setActiveBossScene = useCallback((sceneId, scrollY) => {
-    activeBossSceneIdRef.current = sceneId
-    if (sceneId) lockScrollAt(lockedScrollYRef, scrollY)
-    else clearScrollLock(lockedScrollYRef)
-    setActiveCombatSceneId(sceneId)
-  }, [])
-
-  const restoreLockedScroll = useCallback(
-    () => restoreLockedScrollHelper(lockedScrollYRef),
-    []
-  )
+  const autoAdvanceTimeoutRef = useRef(null)
 
   const ensureBossHp = useCallback((scene) => {
     if (!scene?.monster) return
     if (lastBossHpRef.current[scene.id] != null) return
     lastBossHpRef.current[scene.id] = scene.monster.hp
     setBossHpMap((prev) => ({ ...prev, [scene.id]: scene.monster.hp }))
-  }, [])
-
-  const getBossHp = useCallback(
-    (scene) => lastBossHpRef.current[scene.id] ?? scene.monster.hp,
-    []
-  )
-
-  const isBossScrollLocked = useCallback(() => {
-    const sceneId = activeBossSceneIdRef.current
-    const scene = scenes.find((s) => s.id === sceneId)
-    if (clearedMonstersRef.current[sceneId]) return false
-    return shouldLockBossScroll(
-      sceneId,
-      completedBossesRef.current,
-      lastBossHpRef.current,
-      scene?.monster?.hp ?? 0
-    )
-  }, [scenes])
-
-  const cancelAutoAdvance = useCallback(() => {
-    if (autoAdvanceTimeoutRef.current) {
-      clearTimeout(autoAdvanceTimeoutRef.current)
-      autoAdvanceTimeoutRef.current = null
-    }
-    if (autoScrollTweenRef.current) {
-      autoScrollTweenRef.current.kill()
-      autoScrollTweenRef.current = null
-    }
   }, [])
 
   const clearCombatTransforms = useCallback(() => {
@@ -90,50 +38,34 @@ export function useGameSession(scenes, { partyRef, monsterRef, onCombatReset }) 
     }
   }, [partyRef, monsterRef, onCombatReset])
 
-  const scrollToSceneIndex = useCallback(
-    (idx) => {
-      const sceneEl = sceneRefs.current[idx]
-      if (!sceneEl) return
-      cancelAutoAdvance()
-      autoScrollTweenRef.current = gsap.to(window, {
-        scrollTo: { y: sceneEl, offsetY: 0, autoKill: true },
-        duration: 1.0,
-        ease: 'power2.inOut',
-        onComplete: () => {
-          autoScrollTweenRef.current = null
-          setCurrentSceneIndex(idx)
-        },
-        onInterrupt: () => {
-          autoScrollTweenRef.current = null
-        },
-      })
-    },
-    [cancelAutoAdvance]
-  )
+  const cancelAutoAdvance = useCallback(() => {
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current)
+      autoAdvanceTimeoutRef.current = null
+    }
+  }, [])
 
   const refs = useMemo(
     () => ({
-      sceneRefs, lastBossHpRef, activeBossSceneIdRef, lockedScrollYRef,
-      clearedMonstersRef, completedBossesRef, monsterTriggersRef,
-      isFinisherRef, lastManualStrikeRef, autoAdvanceTimeoutRef, cleanupTimeoutsRef,
+      lastBossHpRef, completedBossesRef, clearedMonstersRef,
+      isFinisherRef, lastManualStrikeRef, cleanupTimeoutsRef, autoAdvanceTimeoutRef,
     }),
     []
   )
   const setters = useMemo(
-    () => ({ setCurrentSceneIndex, setBossHpMap, setClearedMonsterMap, setAttackTrigger, setHasScrolled }),
+    () => ({
+      setCurrentSceneIndex, setBossHpMap, setClearedMonsterMap,
+      setActiveCombatSceneId, setAttackTrigger,
+    }),
     []
   )
   const helpers = useMemo(
-    () => ({
-      setActiveBossScene, restoreLockedScroll, ensureBossHp, getBossHp,
-      isBossScrollLocked, cancelAutoAdvance, clearCombatTransforms, scrollToSceneIndex,
-    }),
-    [setActiveBossScene, restoreLockedScroll, ensureBossHp, getBossHp,
-     isBossScrollLocked, cancelAutoAdvance, clearCombatTransforms, scrollToSceneIndex]
+    () => ({ ensureBossHp, clearCombatTransforms, cancelAutoAdvance }),
+    [ensureBossHp, clearCombatTransforms, cancelAutoAdvance]
   )
 
   return {
-    state: { currentSceneIndex, bossHpMap, clearedMonsterMap, activeCombatSceneId, attackTrigger, hasScrolled },
+    state: { currentSceneIndex, bossHpMap, clearedMonsterMap, activeCombatSceneId, attackTrigger },
     refs, setters, helpers,
   }
 }

@@ -24,12 +24,20 @@ function allyAttackKeyframes(direction) {
   ]
 }
 
-const MONSTER_SHAKE_KEYFRAMES = [
-  { x: -14, rotation: -3, duration: 0.04 },
-  { x: 14, rotation: 3, duration: 0.04 },
-  { x: -10, rotation: -2, duration: 0.04 },
-  { x: 8, rotation: 2, duration: 0.04 },
-  { x: 0, rotation: 0, duration: 0.06 },
+const MONSTER_HIT_KEYFRAMES = [
+  { x: -16, scaleX: 1.18, scaleY: 0.86, rotation: -7, filter: 'brightness(2.4) saturate(0)', duration: 0.05 },
+  { x: 14, scaleX: 0.92, scaleY: 1.1, rotation: 5, filter: 'brightness(1.6) saturate(0.4)', duration: 0.06 },
+  { x: -8, scaleX: 1.04, scaleY: 0.97, rotation: -2, filter: 'brightness(1.1) saturate(1)', duration: 0.07 },
+  { x: 6, scaleX: 1, scaleY: 1, rotation: 1, filter: 'brightness(1)', duration: 0.07 },
+  { x: 0, scaleX: 1, scaleY: 1, rotation: 0, duration: 0.05 },
+]
+
+const MONSTER_FINISHER_KEYFRAMES = [
+  { x: -22, scaleX: 1.3, scaleY: 0.78, rotation: -10, filter: 'brightness(3.5) saturate(0)', duration: 0.06 },
+  { x: 20, scaleX: 0.86, scaleY: 1.18, rotation: 9, filter: 'brightness(2.2) saturate(0.2)', duration: 0.07 },
+  { x: -16, scaleX: 1.1, scaleY: 0.95, rotation: -5, filter: 'brightness(1.6) saturate(0.6) hue-rotate(20deg)', duration: 0.09 },
+  { x: 12, scaleX: 0.96, scaleY: 1.04, rotation: 4, filter: 'brightness(1.2) saturate(0.85)', duration: 0.1 },
+  { x: 0, scaleX: 1, scaleY: 1, rotation: 0, filter: 'brightness(1)', duration: 0.12 },
 ]
 
 function animatePartyAttack(partyEl) {
@@ -51,8 +59,20 @@ function animatePartyAttack(partyEl) {
   })
 }
 
-function animateMonsterShake(monsterEl) {
-  gsap.fromTo(monsterEl, { x: 0, rotation: 0 }, { keyframes: MONSTER_SHAKE_KEYFRAMES })
+function animateMonsterHit(monsterEl, isFinisher) {
+  const keyframes = isFinisher ? MONSTER_FINISHER_KEYFRAMES : MONSTER_HIT_KEYFRAMES
+  gsap.killTweensOf(monsterEl)
+  gsap.fromTo(
+    monsterEl,
+    { x: 0, scaleX: 1, scaleY: 1, rotation: 0, filter: 'brightness(1)' },
+    { keyframes, transformOrigin: '50% 100%' }
+  )
+  monsterEl.classList.add('monster--struck')
+  if (isFinisher) monsterEl.classList.add('monster--struck-final')
+  setTimeout(() => {
+    monsterEl.classList.remove('monster--struck')
+    monsterEl.classList.remove('monster--struck-final')
+  }, isFinisher ? 480 : 320)
 }
 
 export function useCombatEffects({
@@ -79,7 +99,7 @@ export function useCombatEffects({
       confettiBurst(isFinisher).forEach((opts) => confetti(opts))
     }
     if (partyRef.current) animatePartyAttack(partyRef.current)
-    if (monsterRef.current) animateMonsterShake(monsterRef.current)
+    if (monsterRef.current) animateMonsterHit(monsterRef.current, isFinisher)
 
     const slash = makeSlash()
     const impact = makeImpactWord(isFinisher)

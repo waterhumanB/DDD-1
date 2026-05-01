@@ -1,90 +1,118 @@
-import { useCallback } from 'react'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useCallback, useEffect } from 'react'
 import {
   AUTO_ADVANCE_DELAY_MS,
   COMBAT_CLEANUP_DELAY_MS,
   MANUAL_STRIKE_COOLDOWN_MS,
 } from '../lib/combat.js'
+import { findNeighbor, indexOfScene, isBossScene } from '../lib/navigation.js'
 import { useGameSession } from './useGameSession.js'
-import { useSceneTriggers } from './useSceneTriggers.js'
-import { useScrollReset } from './useScrollReset.js'
-import { useBossScrollLock } from './useBossScrollLock.js'
 
 export function useGameOrchestrator(scenes, opts) {
-  const session = useGameSession(scenes, opts)
+  const {
+    partyRef, monsterRef, onCombatReset,
+    onSceneChange, onNavBlocked, onAttackHit, onBossDefeat, onCombatStart,
+  } = opts
+  const session = useGameSession({ partyRef, monsterRef, onCombatReset })
   const { state, setters, refs, helpers } = session
+
+  const goToScene = useCallback(
+    (idx, direction = 'right') => {
+      if (idx < 0 || idx >= scenes.length) return
+      if (idx === state.currentSceneIndex) return
+      helpers.cancelAutoAdvance()
+      helpers.clearCombatTransforms()
+      setters.setActiveCombatSceneId(null)
+      setters.setCurrentSceneIndex(idx)
+      onSceneChange?.(idx, direction)
+    },
+    [scenes.length, state.currentSceneIndex, setters, helpers, onSceneChange]
+  )
+
+  const move = useCallback(
+    (direction) => {
+      const current = scenes[state.currentSceneIndex]
+      if (!current) return
+      const target = findNeighbor(scenes, current.id, direction)
+      if (!target) {
+        onNavBlocked?.()
+        return
+      }
+      const targetIdx = indexOfScene(scenes, target.id)
+      if (targetIdx < 0) return
+      goToScene(targetIdx, direction)
+    },
+    [scenes, state.currentSceneIndex, goToScene, onNavBlocked]
+  )
 
   const handleMonsterDefeat = useCallback(
     (sceneId) => {
       if (refs.clearedMonstersRef.current[sceneId]) return
-      const idx = scenes.findIndex((s) => s.id === sceneId)
+      const idx = indexOfScene(scenes, sceneId)
       if (idx < 0) return
       const scene = scenes[idx]
       refs.clearedMonstersRef.current[sceneId] = true
       setters.setClearedMonsterMap((prev) => ({ ...prev, [sceneId]: true }))
+      if (!isBossScene(scene)) return
 
-      if (scene.monster?.mode !== 'scroll') return
       refs.completedBossesRef.current[sceneId] = true
-      helpers.setActiveBossScene(null)
-      const trigger = refs.monsterTriggersRef.current[sceneId]
-      if (trigger) {
-        trigger.disable(true, false)
-        requestAnimationFrame(() => ScrollTrigger.refresh())
-      }
+      setters.setActiveCombatSceneId(null)
+      onBossDefeat?.()
       const cleanup = setTimeout(() => {
         refs.cleanupTimeoutsRef.current.delete(cleanup)
         helpers.clearCombatTransforms()
       }, COMBAT_CLEANUP_DELAY_MS)
       refs.cleanupTimeoutsRef.current.add(cleanup)
-      if (idx >= scenes.length - 1) return
+      if (!scene.next) return
+      const nextIdx = indexOfScene(scenes, scene.next.sceneId)
+      if (nextIdx < 0) return
       refs.autoAdvanceTimeoutRef.current = setTimeout(() => {
         refs.autoAdvanceTimeoutRef.current = null
-        helpers.scrollToSceneIndex(idx + 1)
+        goToScene(nextIdx, scene.next.direction)
       }, AUTO_ADVANCE_DELAY_MS)
     },
-    [scenes, setters, refs, helpers]
+    [scenes, setters, refs, helpers, goToScene, onBossDefeat]
   )
 
   const triggerAttack = useCallback(() => {
     const now = Date.now()
     if (now - refs.lastManualStrikeRef.current < MANUAL_STRIKE_COOLDOWN_MS) return
-    const sceneId = refs.activeBossSceneIdRef.current
+    const sceneId = state.activeCombatSceneId
     const scene = scenes.find((s) => s.id === sceneId)
-    if (scene?.monster?.mode === 'scroll') {
+    if (isBossScene(scene)) {
       const currentHp = refs.lastBossHpRef.current[sceneId] ?? scene.monster.hp
       const nextHp = Math.max(0, currentHp - 1)
       if (currentHp === nextHp) return
       refs.lastBossHpRef.current[sceneId] = nextHp
       refs.isFinisherRef.current = nextHp === 0
       setters.setBossHpMap((prev) => ({ ...prev, [sceneId]: nextHp }))
+      onAttackHit?.(nextHp)
     } else {
       refs.isFinisherRef.current = false
     }
     refs.lastManualStrikeRef.current = now
     setters.setAttackTrigger((p) => p + 1)
-  }, [scenes, setters, refs])
+  }, [scenes, state.activeCombatSceneId, refs, setters, onAttackHit])
 
-  useScrollReset(
-    useCallback(() => {
-      setters.setCurrentSceneIndex(0)
-      helpers.setActiveBossScene(null)
-      helpers.cancelAutoAdvance()
-      helpers.clearCombatTransforms()
-    }, [setters, helpers])
-  )
-
-  useSceneTriggers(scenes, session)
-  useBossScrollLock(helpers.isBossScrollLocked, refs.lockedScrollYRef)
+  useEffect(() => {
+    const scene = scenes[state.currentSceneIndex]
+    if (!scene) return
+    if (!isBossScene(scene)) return
+    if (refs.clearedMonstersRef.current[scene.id]) return
+    if (refs.completedBossesRef.current[scene.id]) return
+    helpers.ensureBossHp(scene)
+    setters.setActiveCombatSceneId(scene.id)
+    onCombatStart?.()
+  }, [scenes, state.currentSceneIndex, refs, helpers, setters, onCombatStart])
 
   return {
-    sceneRefs: refs.sceneRefs,
     currentSceneIndex: state.currentSceneIndex,
     activeCombatSceneId: state.activeCombatSceneId,
     bossHpMap: state.bossHpMap,
     clearedMonsterMap: state.clearedMonsterMap,
     attackTrigger: state.attackTrigger,
     isFinisherRef: refs.isFinisherRef,
-    hasScrolled: state.hasScrolled,
+    move,
+    goToScene,
     handleMonsterDefeat,
     triggerAttack,
   }

@@ -69,9 +69,53 @@ const DemonSprite = () => (
   </svg>
 )
 
+const WolfSprite = () => (
+  <svg viewBox="0 0 14 12" className="monster__sprite">
+    <g shapeRendering="crispEdges">
+      <rect x="2" y="3" width="2" height="2" fill="#3a3a3a" />
+      <rect x="9" y="3" width="2" height="2" fill="#3a3a3a" />
+      <rect x="2" y="2" width="1" height="1" fill="#5a5a5a" />
+      <rect x="10" y="2" width="1" height="1" fill="#5a5a5a" />
+      <rect x="3" y="5" width="8" height="4" fill="#5a5a5a" />
+      <rect x="2" y="6" width="1" height="2" fill="#3a3a3a" />
+      <rect x="11" y="6" width="1" height="2" fill="#3a3a3a" />
+      <rect x="4" y="6" width="1" height="1" fill="#ffd54a" />
+      <rect x="9" y="6" width="1" height="1" fill="#ffd54a" />
+      <rect x="6" y="7" width="2" height="1" fill="#000" />
+      <rect x="6" y="8" width="1" height="1" fill="#fff" />
+      <rect x="7" y="8" width="1" height="1" fill="#fff" />
+      <rect x="3" y="9" width="2" height="3" fill="#3a3a3a" />
+      <rect x="9" y="9" width="2" height="3" fill="#3a3a3a" />
+      <rect x="11" y="6" width="3" height="1" fill="#3a3a3a" />
+      <rect x="12" y="5" width="2" height="1" fill="#3a3a3a" />
+    </g>
+  </svg>
+)
+
+const BatSprite = () => (
+  <svg viewBox="0 0 14 10" className="monster__sprite">
+    <g shapeRendering="crispEdges">
+      <rect x="0" y="3" width="3" height="4" fill="#3d0e3a" />
+      <rect x="1" y="2" width="2" height="1" fill="#3d0e3a" />
+      <rect x="11" y="3" width="3" height="4" fill="#3d0e3a" />
+      <rect x="11" y="2" width="2" height="1" fill="#3d0e3a" />
+      <rect x="3" y="4" width="2" height="2" fill="#5a1f55" />
+      <rect x="9" y="4" width="2" height="2" fill="#5a1f55" />
+      <rect x="5" y="3" width="4" height="4" fill="#7a1f50" />
+      <rect x="5" y="2" width="1" height="1" fill="#7a1f50" />
+      <rect x="8" y="2" width="1" height="1" fill="#7a1f50" />
+      <rect x="6" y="4" width="1" height="1" fill="#ff5577" />
+      <rect x="7" y="4" width="1" height="1" fill="#ff5577" />
+      <rect x="6" y="6" width="2" height="1" fill="#000" />
+    </g>
+  </svg>
+)
+
 export const monsterSprites = {
   shadow: ShadowSprite,
   slime: SlimeSprite,
   giant: GiantSprite,
   demon: DemonSprite,
+  wolf: WolfSprite,
+  bat: BatSprite,
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+const AUTO_HIT_DELAY_MS = 800
 const AUTO_DEFEAT_DELAY_MS = 1500
 const HIT_LIFETIME_MS = 700
 const INTERACTIVE_DEFEAT_DELAY_MS = 400
@@ -14,17 +15,18 @@ function makeHit(value) {
 
 export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefeat }) {
   const isInteractive = monster?.mode === 'interactive'
-  const isScroll = monster?.mode === 'scroll'
+  const isBoss = monster?.mode === 'boss'
 
   const [internalHp, setInternalHp] = useState(monster?.hp ?? 0)
   const [hits, setHits] = useState([])
   const [defeated, setDefeated] = useState(false)
+  const [autoStruck, setAutoStruck] = useState(false)
   const onDefeatRef = useRef(onDefeat)
   onDefeatRef.current = onDefeat
   const lastHpRef = useRef(monster?.hp ?? 0)
   const hitTimeoutsRef = useRef(new Set())
 
-  const displayHp = isScroll ? Math.max(0, controlledHp ?? monster?.hp ?? 0) : internalHp
+  const displayHp = isBoss ? Math.max(0, controlledHp ?? monster?.hp ?? 0) : internalHp
 
   function pushHit(value) {
     const hit = makeHit(value)
@@ -42,6 +44,7 @@ export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefea
     setInternalHp(monster?.hp ?? 0)
     setHits([])
     setDefeated(false)
+    setAutoStruck(false)
     lastHpRef.current = monster?.hp ?? 0
   }, [monster, resetKey])
 
@@ -53,21 +56,29 @@ export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefea
   }, [])
 
   useEffect(() => {
-    if (!isScroll || isCleared) return
+    if (!isBoss || isCleared) return
     if (displayHp > 0 && defeated) setDefeated(false)
-  }, [isScroll, displayHp, defeated, isCleared])
+  }, [isBoss, displayHp, defeated, isCleared])
 
   useEffect(() => {
-    if (isCleared || isInteractive || isScroll || !monster) return
-    const timeoutId = setTimeout(() => {
+    if (isCleared || isInteractive || isBoss || !monster) return
+    const hitTimeout = setTimeout(() => {
+      setAutoStruck(true)
+      pushHit(1)
+    }, AUTO_HIT_DELAY_MS)
+    const defeatTimeout = setTimeout(() => {
       setDefeated(true)
       onDefeatRef.current?.()
     }, AUTO_DEFEAT_DELAY_MS)
-    return () => clearTimeout(timeoutId)
-  }, [monster, isInteractive, isScroll, isCleared])
+    return () => {
+      clearTimeout(hitTimeout)
+      clearTimeout(defeatTimeout)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monster, isInteractive, isBoss, isCleared])
 
   useEffect(() => {
-    if (!isScroll || isCleared) return
+    if (!isBoss || isCleared) return
     if (displayHp < lastHpRef.current) {
       const diff = lastHpRef.current - displayHp
       if (diff > 0) pushHit(diff)
@@ -77,7 +88,7 @@ export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefea
       setDefeated(true)
       onDefeatRef.current?.()
     }
-  }, [isScroll, displayHp, defeated, isCleared])
+  }, [isBoss, displayHp, defeated, isCleared])
 
   function attack() {
     if (defeated) return
@@ -104,5 +115,5 @@ export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInteractive, internalHp, defeated])
 
-  return { isInteractive, isScroll, displayHp, hits, defeated, attack }
+  return { isInteractive, isBoss, displayHp, hits, defeated, autoStruck, attack }
 }

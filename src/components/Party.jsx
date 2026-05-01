@@ -2,30 +2,25 @@ import { forwardRef } from 'react'
 import PixelCharacter from './PixelCharacter'
 import { levelOf } from '../data/scenes'
 
-// 파티 — 표시 순서대로 캐릭터 배치 (hero가 가운데 인덱스에 위치).
-// sceneIndex로 각 멤버의 진화 레벨 자동 계산.
-// moveDirection: 'left' | 'right' | 'up'
-
 const Party = forwardRef(function Party(
   {
     party,
     newAlly,
-    moveDirection = 'right',
+    facing = 'right',
     sceneIndex = 0,
     attackTrigger = 0,
     isCombatActive = false,
   },
   ref
 ) {
-  const facing = moveDirection === 'left' ? 'flip' : 'normal'
+  const flipClass = facing === 'left' ? 'party--flip' : 'party--normal'
 
   return (
     <div
       ref={ref}
-      className={`party party--${moveDirection} party--${facing} ${
-        isCombatActive ? 'party--combat' : ''
-      }`}
+      className={`party ${flipClass} ${isCombatActive ? 'party--combat' : ''}`}
       data-attack={attackTrigger}
+      data-facing={facing}
       aria-hidden="true"
     >
       {party.map((id, i) => {
