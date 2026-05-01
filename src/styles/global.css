@@ -707,9 +707,12 @@ body::after {
 .monster__sprite-wrap { position: relative; width: 100%; }
 
 .monster__sprite {
+  display: block;
   width: 100%;
   height: auto;
-  image-rendering: pixelated;
+  filter:
+    drop-shadow(2px 2px 0 #000)
+    drop-shadow(0 0 6px rgba(0, 0, 0, 0.55));
 }
 
 .monster__name {
