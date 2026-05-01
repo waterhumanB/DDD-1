@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { BGM_PATTERNS } from '../lib/bgm.js'
-import { playTone, resumeContext } from '../lib/sound.js'
+import { playTone } from '../lib/sound.js'
 
 export function useBgm({ mood, muted }) {
   const activeRef = useRef(false)
@@ -17,7 +17,6 @@ export function useBgm({ mood, muted }) {
     if (!pattern) return
 
     activeRef.current = true
-    resumeContext()
     const noteTimers = new Set()
     let cycleTimer = null
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { playSoundPreset, resumeContext } from '../lib/sound.js'
+import { markUserInteraction, playSoundPreset } from '../lib/sound.js'
 
 const STORAGE_KEY = 'rpg:muted'
 
@@ -26,18 +26,19 @@ export function useSoundEffects() {
   mutedRef.current = muted
 
   useEffect(() => {
-    const wakeOnInteraction = () => resumeContext()
+    const wakeOnInteraction = () => markUserInteraction()
     window.addEventListener('pointerdown', wakeOnInteraction, { once: true })
+    window.addEventListener('touchstart', wakeOnInteraction, { once: true, passive: true })
     window.addEventListener('keydown', wakeOnInteraction, { once: true })
     return () => {
       window.removeEventListener('pointerdown', wakeOnInteraction)
+      window.removeEventListener('touchstart', wakeOnInteraction)
       window.removeEventListener('keydown', wakeOnInteraction)
     }
   }, [])
 
   const play = useCallback((preset) => {
     if (mutedRef.current) return
-    resumeContext()
     playSoundPreset(preset)
   }, [])
 

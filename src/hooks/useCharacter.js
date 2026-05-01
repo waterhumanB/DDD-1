@@ -178,5 +178,19 @@ export function useCharacter({ onEdge, onStep, blockedRef, surfaceRef }) {
     [writeSurface]
   )
 
-  return { x: reactPos.x, y: reactPos.y, facing, placeAtSpawn }
+  const setHeld = useCallback(
+    (dir, value) => {
+      if (!heldRef.current) return
+      if (value && blockedRef?.current) return
+      heldRef.current[dir] = value
+      if (value) {
+        if (dir === 'left') setFacing('left')
+        else if (dir === 'right') setFacing('right')
+        startLoop()
+      }
+    },
+    [blockedRef, startLoop]
+  )
+
+  return { x: reactPos.x, y: reactPos.y, facing, placeAtSpawn, setHeld }
 }

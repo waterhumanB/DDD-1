@@ -1215,17 +1215,27 @@ body::after {
 .edge-marker--up    { top: 1rem; left: 50%; transform: translateX(-50%); flex-direction: column; }
 .edge-marker--down  { bottom: 1rem; left: 50%; transform: translateX(-50%); flex-direction: column; }
 
-.edge-marker__arrow { font-size: 2.4rem; line-height: 1; }
-.edge-marker__label { font-size: 0.65rem; letter-spacing: 0.22em; }
+.edge-marker__arrow { font-size: 2rem; line-height: 1; }
+.edge-marker__label { font-size: 0.6rem; letter-spacing: 0.2em; }
 
-/* NEXT — 크고 강조, 황금색 + 화려한 글로우 */
+/* 공통 박스 — NEXT/PREV 정렬을 위해 동일 사이즈 */
+.edge-marker--next,
+.edge-marker--prev {
+  background: rgba(20, 14, 32, 0.78);
+  border: 2px solid;
+  border-radius: 10px;
+  padding: 0.4rem 0.6rem;
+  min-width: 4.5rem;
+}
+
+/* NEXT — 황금 강조 */
 .edge-marker--next {
   color: #ffd54a;
+  border-color: var(--color-accent);
   filter: drop-shadow(0 0 10px rgba(255, 213, 74, 0.9));
   animation: edge-marker-next-pulse 1.0s ease-in-out infinite;
 }
-.edge-marker--next .edge-marker__arrow { font-size: 3rem; }
-.edge-marker--next .edge-marker__label { font-size: 0.8rem; color: #fff7c2; }
+.edge-marker--next .edge-marker__label { color: #fff7c2; }
 
 .edge-marker--next.is-active {
   filter:
@@ -1234,12 +1244,12 @@ body::after {
   animation-duration: 0.55s;
 }
 
-/* BACK — 작고 차분 */
+/* PREV — 차분 (배경 박스는 NEXT와 동일, 컬러만 다름) */
 .edge-marker--prev {
-  color: rgba(245, 233, 200, 0.55);
-  opacity: 0.55;
+  color: rgba(245, 233, 200, 0.7);
+  border-color: rgba(245, 233, 200, 0.3);
+  opacity: 0.75;
 }
-.edge-marker--prev .edge-marker__arrow { font-size: 1.4rem; }
 .edge-marker--prev.is-active { opacity: 1; }
 
 @keyframes edge-marker-next-pulse {
@@ -1260,21 +1270,82 @@ body::after {
   transform: translateX(-50%);
 }
 
-@media (max-width: 600px) {
-  .edge-marker__arrow { font-size: 2.4rem; }
-  .edge-marker--next .edge-marker__arrow { font-size: 3.2rem; }
-  .edge-marker--prev .edge-marker__arrow { font-size: 1.4rem; }
-  .edge-marker--next .edge-marker__label { font-size: 0.7rem; }
-  .edge-marker--prev .edge-marker__label { font-size: 0.5rem; }
-  .edge-marker--up    { top: 0.6rem; }
-  .edge-marker--down  { bottom: 0.6rem; }
-  .edge-marker--left  { left: 0.6rem; }
-  .edge-marker--right { right: 0.6rem; }
+/* 모바일에선 D-pad가 모든 방향 안내 → edge marker 숨김 */
+@media (hover: none) and (pointer: coarse), (max-width: 600px) {
+  .edge-marker { display: none; }
 }
 
-@media (max-width: 600px) {
-  .edge-marker { font-size: 1rem; }
-  .edge-marker__label { display: none; }
+
+/* ────────────────────────────────────────
+   가상 D-pad — 모바일에서만 표시
+──────────────────────────────────────── */
+.dpad {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse), (max-width: 600px) {
+  .dpad {
+    display: grid;
+    grid-template-columns: 64px 64px 64px;
+    grid-template-rows: 64px 64px 64px;
+    gap: 6px;
+    position: fixed;
+    right: 1rem;
+    bottom: max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem);
+    left: auto;
+    z-index: 200;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    background: rgba(10, 6, 18, 0.55);
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(245, 233, 200, 0.2);
+    backdrop-filter: blur(3px);
+  }
+  /* 3x3 그리드 — 위/왼/가운데/오른/아래만 채움 */
+  .dpad__btn--up    { grid-column: 2; grid-row: 1; }
+  .dpad__btn--left  { grid-column: 1; grid-row: 2; }
+  .dpad__center     { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; }
+  .dpad__btn--right { grid-column: 3; grid-row: 2; }
+  .dpad__btn--down  { grid-column: 2; grid-row: 3; }
+
+  .dpad__center::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    background: rgba(245, 233, 200, 0.15);
+    border-radius: 50%;
+  }
+
+  .dpad__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-pixel);
+    font-size: 1.8rem;
+    color: var(--color-accent);
+    background: rgba(20, 14, 32, 0.92);
+    border: 2px solid rgba(245, 233, 200, 0.55);
+    border-radius: 12px;
+    text-shadow: 2px 2px 0 #000;
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 380px) {
+  .dpad {
+    grid-template-columns: 56px 56px 56px;
+    grid-template-rows: 56px 56px 56px;
+  }
+  .dpad__btn { font-size: 1.5rem; }
 }
 
 /* ────────────────────────────────────────
@@ -1319,44 +1390,9 @@ body::after {
   50%      { opacity: 0.55; }
 }
 
-/* 모바일 — 데스크톱 D-pad 숨기고 좌/우 탭존 표시 */
+/* 모바일 — 데스크톱 D-pad 힌트 숨김. 가상 D-pad가 우하단에 표시됨 */
 @media (hover: none) and (pointer: coarse), (max-width: 600px) {
-  .nav-hint {
-    inset: auto 0 1rem 0;
-    bottom: 1rem;
-    right: auto;
-  }
-  .nav-hint__desktop { display: none; }
-  .nav-hint__mobile {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 1.5rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    animation: nav-hint-pulse 1.8s steps(2) infinite;
-  }
-  .nav-hint__zone { color: rgba(245, 233, 200, 0.7); }
-}
-
-/* 모바일 좌/우 탭 영역 — 캐릭터 이동 가능할 때만 가운데 분리선 보여줌 */
-@media (hover: none) and (pointer: coarse) {
-  .app-shell:not(.app-shell--combat)::before {
-    content: '';
-    position: fixed;
-    top: 25%;
-    bottom: 25%;
-    left: 50%;
-    width: 1px;
-    background: linear-gradient(
-      to bottom,
-      transparent,
-      rgba(245, 233, 200, 0.15) 40%,
-      rgba(245, 233, 200, 0.15) 60%,
-      transparent
-    );
-    pointer-events: none;
-    z-index: 90;
-  }
+  .nav-hint { display: none; }
 }
 
 .hud__mute {
@@ -1391,9 +1427,32 @@ body::after {
    반응형
 ──────────────────────────────────────── */
 @media (max-width: 600px) {
-  .scene__inner { padding: 1.5rem 1.25rem; }
-  .scene__title { font-size: 0.85rem; }
-  .scene__body { font-size: 0.95rem; }
+  .scene { padding: 4.5rem 0.75rem 6rem; }
+  .scene__inner {
+    padding: 1.25rem 1rem;
+    max-width: calc(100vw - 1.5rem);
+    width: calc(100vw - 1.5rem);
+    box-sizing: border-box;
+  }
+  .scene__title { font-size: 0.78rem; line-height: 1.5; }
+  .scene__body {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  .scene__transition { font-size: 0.55rem; padding: 0.5rem 0.75rem; }
+  .hud {
+    top: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.45rem;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .hud__panel { padding: 0.35rem 0.5rem; border-width: 1px; }
+  .hud__mute { padding: 0.35rem 0.5rem; }
+  .attribution { font-size: 0.4rem; bottom: 0.3rem; left: 0.4rem; }
   .party { gap: 2px; bottom: 10vh; }
   .party__member { width: 36px; height: 54px; }
   .party--combat { gap: 4px; bottom: 8vh; }

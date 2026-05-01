@@ -9,7 +9,6 @@ import { useCharacter } from './hooks/useCharacter.js'
 import { useBgm } from './hooks/useBgm.js'
 import { useCombatEffects } from './hooks/useCombatEffects.js'
 import { useCombatInput } from './hooks/useCombatInput.js'
-import { useTouchNavigation } from './hooks/useTouchNavigation.js'
 import { usePartyJump } from './hooks/usePartyJump.js'
 import { useSceneSlide } from './hooks/useSceneSlide.js'
 import { useSoundEffects } from './hooks/useSoundEffects.js'
@@ -22,6 +21,7 @@ import EffectsLayer from './components/EffectsLayer'
 import BattleOverlay from './components/BattleOverlay'
 import NavHint from './components/NavHint'
 import EdgeMarkers from './components/EdgeMarkers'
+import VirtualDPad from './components/VirtualDPad'
 import Discoveries from './components/Discoveries'
 
 export default function App() {
@@ -91,17 +91,6 @@ export default function App() {
   useBgm({ mood: SCENE_BGM[currentScene.id], muted: sound.muted })
 
   useCombatInput(isCombatActive, triggerAttackWithSound)
-  const tapPrev = useCallback(() => {
-    const dir = currentScene.prev?.direction
-    if (dir) moveRef.current?.(dir)
-    else moveRef.current?.('left')
-  }, [currentScene])
-  const tapNext = useCallback(() => {
-    const dir = currentScene.next?.direction
-    if (dir) moveRef.current?.(dir)
-    else moveRef.current?.('right')
-  }, [currentScene])
-  useTouchNavigation(!isCombatActive, tapPrev, tapNext)
   usePartyJump(partyRef, game.currentSceneIndex)
   useSceneSlide(trackRef, scenes, game.currentSceneIndex)
 
@@ -193,11 +182,8 @@ export default function App() {
         characterX={character.x}
         characterY={character.y}
       />
-      <NavHint
-        isCombatActive={isCombatActive}
-        canPrev={game.currentSceneIndex > 0}
-        canNext={game.currentSceneIndex < scenes.length - 1 && !isCombatActive}
-      />
+      <NavHint isCombatActive={isCombatActive} />
+      <VirtualDPad isCombatActive={isCombatActive} />
     </div>
   )
 }

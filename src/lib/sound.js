@@ -2,23 +2,38 @@
 // Web Audio API의 OscillatorNode로 톤을 즉시 생성. 픽셀 RPG 미감과 일치.
 
 let sharedContext = null
+let userInteracted = false
 
 function getContext() {
   if (typeof window === 'undefined') return null
   if (sharedContext) return sharedContext
+  // 첫 사용자 제스처 전에는 AudioContext 자체를 만들지 않음 (Chrome autoplay 경고 차단)
+  if (!userInteracted) return null
   const Ctor = window.AudioContext || window.webkitAudioContext
   if (!Ctor) return null
   sharedContext = new Ctor()
   return sharedContext
 }
 
+export function markUserInteraction() {
+  userInteracted = true
+  const ctx = getContext()
+  if (ctx?.state === 'suspended') ctx.resume().catch(() => {})
+}
+
+export function isAudioReady() {
+  return userInteracted && sharedContext?.state === 'running'
+}
+
+// 사용자 입력 전엔 no-op. 입력 후엔 ctx 생성/resume. BGM 등에서 안전하게 호출 가능.
 export function resumeContext() {
+  if (!userInteracted) return
   const ctx = getContext()
   if (ctx?.state === 'suspended') ctx.resume().catch(() => {})
 }
 
 export function playTone(spec, ctx = getContext()) {
-  if (!ctx) return
+  if (!ctx || ctx.state !== 'running') return
   const {
     freq = 440,
     duration = 0.1,
@@ -46,7 +61,7 @@ export function playTone(spec, ctx = getContext()) {
 }
 
 export function playSequence(specs, ctx = getContext()) {
-  if (!ctx) return
+  if (!ctx || ctx.state !== 'running') return
   let cursor = 0
   for (const spec of specs) {
     playTone({ ...spec, delay: (spec.delay ?? 0) + cursor }, ctx)
