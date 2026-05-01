@@ -3,8 +3,8 @@
 import {
   GiSlime,
   GiWolfHead,
-  GiGiant,
-  GiDevilMask,
+  GiWyvern,
+  GiSeaSerpent,
   GiBatWing,
   GiHoodedFigure,
 } from 'react-icons/gi'
@@ -24,8 +24,8 @@ function makeSprite(Icon, color) {
 
 const ShadowSprite = makeSprite(GiHoodedFigure, '#7a1f8a')
 const SlimeSprite = makeSprite(GiSlime, '#6bff9a')
-const GiantSprite = makeSprite(GiGiant, '#c44545')
-const DemonSprite = makeSprite(GiDevilMask, '#ff3bd0')
+const GiantSprite = makeSprite(GiWyvern, '#c81e1e')
+const DemonSprite = makeSprite(GiSeaSerpent, '#ffd54a')
 const WolfSprite = makeSprite(GiWolfHead, '#9aa1aa')
 const BatSprite = makeSprite(GiBatWing, '#5a1f8a')
 
