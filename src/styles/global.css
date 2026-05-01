@@ -1633,10 +1633,10 @@ body::after {
     z-index: 205;
   }
   .edge-marker--next {
-    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 13.1rem);
+    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 8rem);
   }
   .edge-marker--prev {
-    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 15.75rem);
+    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 10.5rem);
   }
   .edge-marker--next,
   .edge-marker--prev {
@@ -1679,9 +1679,9 @@ body::after {
 @media (hover: none) and (pointer: coarse), (max-width: 600px) {
   .dpad {
     display: grid;
-    grid-template-columns: 64px 64px 64px;
-    grid-template-rows: 64px 64px 64px;
-    gap: 6px;
+    grid-template-columns: 48px 48px 48px;
+    grid-template-rows: 48px 48px;
+    gap: 5px;
     position: fixed;
     right: 1rem;
     bottom: max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem);
@@ -1691,40 +1691,32 @@ body::after {
     -webkit-user-select: none;
     touch-action: none;
     background: rgba(10, 6, 18, 0.55);
-    padding: 10px;
-    border-radius: 16px;
+    padding: 8px;
+    border-radius: 14px;
     border: 1px solid rgba(245, 233, 200, 0.2);
     backdrop-filter: blur(3px);
   }
-  /* 3x3 그리드 — 위/왼/가운데/오른/아래만 채움 */
+  /* 키보드 산모양 — ▲ 한 개 위, ◀ ▼ ▶ 아래 세 개 */
   .dpad__btn--up    { grid-column: 2; grid-row: 1; }
   .dpad__btn--left  { grid-column: 1; grid-row: 2; }
-  .dpad__center     { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; }
+  .dpad__btn--down  { grid-column: 2; grid-row: 2; }
   .dpad__btn--right { grid-column: 3; grid-row: 2; }
-  .dpad__btn--down  { grid-column: 2; grid-row: 3; }
-
-  .dpad__center::after {
-    content: '';
-    width: 14px;
-    height: 14px;
-    background: rgba(245, 233, 200, 0.15);
-    border-radius: 50%;
-  }
+  .dpad__center    { display: none; }
 
   .dpad__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-pixel);
-    font-size: 1.8rem;
+    font-size: 1.3rem;
     color: var(--color-accent);
     background: rgba(20, 14, 32, 0.92);
     border: 2px solid rgba(245, 233, 200, 0.55);
-    border-radius: 12px;
+    border-radius: 10px;
     text-shadow: 2px 2px 0 #000;
     cursor: pointer;
     pointer-events: auto;
-    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.6);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
@@ -1735,10 +1727,10 @@ body::after {
 
 @media (max-width: 380px) {
   .dpad {
-    grid-template-columns: 56px 56px 56px;
-    grid-template-rows: 56px 56px 56px;
+    grid-template-columns: 42px 42px 42px;
+    grid-template-rows: 42px 42px;
   }
-  .dpad__btn { font-size: 1.5rem; }
+  .dpad__btn { font-size: 1.15rem; }
 }
 
 /* ────────────────────────────────────────
