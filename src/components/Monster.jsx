@@ -4,6 +4,21 @@ import { useMonster } from '../hooks/useMonster.js'
 
 const POOF_DURATION_MS = 420
 
+function AutoMonsterPrompt({ onStart }) {
+  return (
+    <div className="monster__prompt">
+      <button
+        type="button"
+        className="monster__fight-btn"
+        data-nav-skip="true"
+        onClick={onStart}
+      >
+        싸우기
+      </button>
+    </div>
+  )
+}
+
 function MonsterHud({ isBoss, isInteractive, displayHp, maxHp, isCombatActive }) {
   const ratio = maxHp > 0 ? displayHp / maxHp : 0
   return (
@@ -28,15 +43,27 @@ function MonsterHud({ isBoss, isInteractive, displayHp, maxHp, isCombatActive })
 }
 
 const Monster = forwardRef(function Monster(
-  { monster, controlledHp, onDefeat, isCombatActive = false, isCleared = false, resetKey = 0 },
+  {
+    monster,
+    controlledHp,
+    onDefeat,
+    isCombatActive = false,
+    isEncounterActive = false,
+    isCleared = false,
+    resetKey = 0,
+    onEncounterChange,
+    hideForChallenge = false,
+  },
   ref
 ) {
+  const [autoBattleStarted, setAutoBattleStarted] = useState(false)
   const { isInteractive, isBoss, displayHp, hits, defeated, autoStruck, attack } = useMonster({
     monster,
     controlledHp,
     isCleared,
     resetKey,
     onDefeat,
+    autoBattleStarted,
   })
 
   const isAuto = !isInteractive && !isBoss
@@ -50,9 +77,15 @@ const Monster = forwardRef(function Monster(
     }
   }, [isAuto, defeated])
 
-  useEffect(() => { setPoofPlaying(false) }, [resetKey])
+  useEffect(() => {
+    setPoofPlaying(false)
+    setAutoBattleStarted(false)
+    onEncounterChange?.(false)
+  }, [resetKey, onEncounterChange])
 
   if (!monster) return null
+  if (isAuto) return null
+  if (hideForChallenge) return null
 
   const Sprite = monsterSprites[monster.sprite] || monsterSprites.slime
   const hpRatio = monster.hp > 0 ? displayHp / monster.hp : 0
@@ -67,14 +100,16 @@ const Monster = forwardRef(function Monster(
     autoStruck && !defeated ? 'monster--auto-struck' : '',
     isPoofing ? 'monster--poof' : '',
   ].filter(Boolean).join(' ')
-  const showHud = (isInteractive || isBoss) && !defeated
+  const showHud = (isInteractive || (isBoss && isCombatActive)) && !defeated
 
   return (
     <div
       ref={ref}
       className={`monster ${modeClass} ${isCombatActive ? 'monster--combat' : ''} ${
         defeated ? 'monster--defeated' : ''
-      } ${phaseClass} ${monster.isFinalBoss ? 'monster--boss-final' : ''} ${reactionClass}`}
+      } ${isAuto && !autoBattleStarted ? 'monster--ready' : ''} ${phaseClass} ${
+        monster.isFinalBoss ? 'monster--boss-final' : ''
+      } ${isEncounterActive ? 'monster--encounter' : ''} ${reactionClass}`}
       onClick={isInteractive ? attack : undefined}
     >
       <div className="monster__sprite-wrap">
@@ -88,6 +123,14 @@ const Monster = forwardRef(function Monster(
           displayHp={displayHp}
           maxHp={monster.hp}
           isCombatActive={isCombatActive}
+        />
+      )}
+      {isAuto && !isCleared && !defeated && !autoBattleStarted && (
+        <AutoMonsterPrompt
+          onStart={() => {
+            setAutoBattleStarted(true)
+            onEncounterChange?.(true)
+          }}
         />
       )}
       {hits.map((h) => (

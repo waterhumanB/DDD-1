@@ -6,6 +6,7 @@ import {
   indexOfScene,
   isBossDefeated,
   isBossScene,
+  isMonsterCleared,
   isReverseDirection,
   nextSceneFor,
 } from './navigation.js'
@@ -64,10 +65,17 @@ test('canMove allows when next/prev direction matches', () => {
   assert.equal(canMove(SCENES, 'b', 'left'), true)
 })
 
-test('canMove blocks at undefeated boss', () => {
+test('canMove only blocks at uncleared boss scenes', () => {
   assert.equal(canMove(SCENES, 'c', 'left'), false)
   assert.equal(canMove(SCENES, 'c', 'left', { c: true }), true)
   assert.equal(canMove(SCENES, 'c', 'left', {}, { c: true }), true)
+})
+
+test('isMonsterCleared returns true for empty and non-boss scenes', () => {
+  assert.equal(isMonsterCleared(SCENES[0]), true)
+  assert.equal(isMonsterCleared(SCENES[1]), true)
+  assert.equal(isMonsterCleared(SCENES[2]), false)
+  assert.equal(isMonsterCleared(SCENES[1], {}, { b: true }), true)
 })
 
 test('isBossDefeated returns true for null scene', () => {

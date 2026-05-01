@@ -4,7 +4,7 @@ import {
   COMBAT_CLEANUP_DELAY_MS,
   MANUAL_STRIKE_COOLDOWN_MS,
 } from '../lib/combat.js'
-import { findNeighbor, indexOfScene, isBossScene } from '../lib/navigation.js'
+import { canMove, findNeighbor, indexOfScene, isBossScene } from '../lib/navigation.js'
 import { useGameSession } from './useGameSession.js'
 
 export function useGameOrchestrator(scenes, opts) {
@@ -37,11 +37,21 @@ export function useGameOrchestrator(scenes, opts) {
         onNavBlocked?.()
         return
       }
+      if (!canMove(
+        scenes,
+        current.id,
+        direction,
+        refs.completedBossesRef.current,
+        refs.clearedMonstersRef.current
+      )) {
+        onNavBlocked?.()
+        return
+      }
       const targetIdx = indexOfScene(scenes, target.id)
       if (targetIdx < 0) return
       goToScene(targetIdx, direction)
     },
-    [scenes, state.currentSceneIndex, goToScene, onNavBlocked]
+    [scenes, state.currentSceneIndex, refs, goToScene, onNavBlocked]
   )
 
   const handleMonsterDefeat = useCallback(
@@ -93,6 +103,19 @@ export function useGameOrchestrator(scenes, opts) {
     setters.setAttackTrigger((p) => p + 1)
   }, [scenes, state.activeCombatSceneId, refs, setters, onAttackHit])
 
+  const startBossCombat = useCallback(
+    (sceneId) => {
+      const scene = scenes.find((s) => s.id === sceneId)
+      if (!isBossScene(scene)) return
+      if (refs.clearedMonstersRef.current[scene.id]) return
+      if (refs.completedBossesRef.current[scene.id]) return
+      helpers.ensureBossHp(scene)
+      setters.setActiveCombatSceneId(scene.id)
+      onCombatStart?.()
+    },
+    [scenes, refs, helpers, setters, onCombatStart]
+  )
+
   useEffect(() => {
     const scene = scenes[state.currentSceneIndex]
     if (!scene) return
@@ -100,9 +123,7 @@ export function useGameOrchestrator(scenes, opts) {
     if (refs.clearedMonstersRef.current[scene.id]) return
     if (refs.completedBossesRef.current[scene.id]) return
     helpers.ensureBossHp(scene)
-    setters.setActiveCombatSceneId(scene.id)
-    onCombatStart?.()
-  }, [scenes, state.currentSceneIndex, refs, helpers, setters, onCombatStart])
+  }, [scenes, state.currentSceneIndex, refs, helpers])
 
   return {
     currentSceneIndex: state.currentSceneIndex,
@@ -114,6 +135,7 @@ export function useGameOrchestrator(scenes, opts) {
     move,
     goToScene,
     handleMonsterDefeat,
+    startBossCombat,
     triggerAttack,
   }
 }

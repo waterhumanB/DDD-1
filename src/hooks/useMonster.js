@@ -13,7 +13,7 @@ function makeHit(value) {
   }
 }
 
-export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefeat }) {
+export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefeat, autoBattleStarted = false }) {
   const isInteractive = monster?.mode === 'interactive'
   const isBoss = monster?.mode === 'boss'
 
@@ -61,7 +61,7 @@ export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefea
   }, [isBoss, displayHp, defeated, isCleared])
 
   useEffect(() => {
-    if (isCleared || isInteractive || isBoss || !monster) return
+    if (isCleared || isInteractive || isBoss || !monster || !autoBattleStarted) return
     const hitTimeout = setTimeout(() => {
       setAutoStruck(true)
       pushHit(1)
@@ -75,7 +75,7 @@ export function useMonster({ monster, controlledHp, isCleared, resetKey, onDefea
       clearTimeout(defeatTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monster, isInteractive, isBoss, isCleared])
+  }, [monster, isInteractive, isBoss, isCleared, autoBattleStarted])
 
   useEffect(() => {
     if (!isBoss || isCleared) return

@@ -3,6 +3,7 @@
 
 let sharedContext = null
 let userInteracted = false
+export const AUDIO_READY_EVENT = 'rpg:audio-ready'
 
 function getContext() {
   if (typeof window === 'undefined') return null
@@ -16,8 +17,18 @@ function getContext() {
 }
 
 export function markUserInteraction() {
+  const wasInteracted = userInteracted
   userInteracted = true
   const ctx = getContext()
+  if (!wasInteracted && typeof window !== 'undefined') {
+    const notifyReady = () => window.dispatchEvent(new Event(AUDIO_READY_EVENT))
+    if (ctx?.state === 'suspended') {
+      ctx.resume().then(notifyReady).catch(() => {})
+    } else {
+      notifyReady()
+    }
+    return
+  }
   if (ctx?.state === 'suspended') ctx.resume().catch(() => {})
 }
 

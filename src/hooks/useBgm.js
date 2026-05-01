@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { BGM_PATTERNS } from '../lib/bgm.js'
-import { playTone } from '../lib/sound.js'
+import { AUDIO_READY_EVENT, playTone } from '../lib/sound.js'
 
 export function useBgm({ mood, muted }) {
   const activeRef = useRef(false)
@@ -42,9 +42,11 @@ export function useBgm({ mood, muted }) {
       cycleTimer = setInterval(fireOnce, pattern.cycleSec * 1000)
     }, 250)
     noteTimers.add(startDelay)
+    window.addEventListener(AUDIO_READY_EVENT, fireOnce)
 
     return () => {
       activeRef.current = false
+      window.removeEventListener(AUDIO_READY_EVENT, fireOnce)
       noteTimers.forEach((id) => clearTimeout(id))
       noteTimers.clear()
       if (cycleTimer) clearInterval(cycleTimer)

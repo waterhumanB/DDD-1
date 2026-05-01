@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { SOUND_PRESETS, playSequence, playSoundPreset, playTone } from './sound.js'
+import {
+  AUDIO_READY_EVENT,
+  SOUND_PRESETS,
+  markUserInteraction,
+  playSequence,
+  playSoundPreset,
+  playTone,
+} from './sound.js'
 
 function makeMockContext() {
   const log = { oscillators: [], gains: [], connections: [] }
@@ -100,4 +107,42 @@ test('playSoundPreset is a no-op for unknown preset names', () => {
 
 test('playTone is a no-op without a context', () => {
   assert.doesNotThrow(() => playTone({ freq: 440 }, null))
+})
+
+test('markUserInteraction resumes audio and emits ready event once', async () => {
+  const originalWindow = global.window
+  const events = []
+  const contexts = []
+
+  class MockAudioContext {
+    constructor() {
+      this.state = 'suspended'
+      contexts.push(this)
+    }
+
+    resume() {
+      this.state = 'running'
+      return Promise.resolve()
+    }
+  }
+
+  global.window = {
+    AudioContext: MockAudioContext,
+    dispatchEvent(event) {
+      events.push(event.type)
+      return true
+    },
+  }
+
+  try {
+    markUserInteraction()
+    markUserInteraction()
+    await Promise.resolve()
+
+    assert.equal(contexts.length, 1)
+    assert.equal(contexts[0].state, 'running')
+    assert.deepEqual(events, [AUDIO_READY_EVENT])
+  } finally {
+    global.window = originalWindow
+  }
 })

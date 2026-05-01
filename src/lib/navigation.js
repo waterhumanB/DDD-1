@@ -2,11 +2,19 @@ export function isBossScene(scene) {
   return scene?.monster?.mode === 'boss'
 }
 
-export function isBossDefeated(scene, completedBosses = {}, clearedMonsters = {}) {
+export function isMonsterCleared(scene, completedBosses = {}, clearedMonsters = {}) {
   if (!scene) return true
+  if (!scene.monster) return true
+  if (!isBossScene(scene)) return true
   if (clearedMonsters[scene.id]) return true
   if (completedBosses[scene.id]) return true
   return false
+}
+
+export function isBossDefeated(scene, completedBosses = {}, clearedMonsters = {}) {
+  if (!scene) return true
+  if (!isBossScene(scene)) return true
+  return isMonsterCleared(scene, completedBosses, clearedMonsters)
 }
 
 export function findNeighbor(scenes, currentSceneId, direction) {
@@ -26,8 +34,7 @@ export function canMove(scenes, currentSceneId, direction, completedBosses = {},
   const target = findNeighbor(scenes, currentSceneId, direction)
   if (!target) return false
   const current = scenes.find((s) => s.id === currentSceneId)
-  if (!isBossScene(current)) return true
-  return isBossDefeated(current, completedBosses, clearedMonsters)
+  return isMonsterCleared(current, completedBosses, clearedMonsters)
 }
 
 export function indexOfScene(scenes, sceneId) {

@@ -18,6 +18,12 @@ const KEY_TO_DIR = {
   ArrowUp: 'up',
   ArrowDown: 'down',
 }
+const DIR_TO_VECTOR = {
+  left: { dx: -1, dy: 0 },
+  right: { dx: 1, dy: 0 },
+  up: { dx: 0, dy: -1 },
+  down: { dx: 0, dy: 1 },
+}
 
 export function useCharacter({ onEdge, onStep, blockedRef, surfaceRef }) {
   const [reactPos, setReactPos] = useState(INITIAL)
@@ -60,6 +66,59 @@ export function useCharacter({ onEdge, onStep, blockedRef, surfaceRef }) {
     }
   }, [])
 
+  const applyMovement = useCallback(
+    (dx, dy, dt, now = performance.now()) => {
+      if (blockedRef?.current) {
+        heldRef.current = RESET_HELD()
+        stopLoop()
+        return false
+      }
+      if (dx === 0 && dy === 0) return false
+      if (dx !== 0 && dy !== 0) { dx *= DIAGONAL; dy *= DIAGONAL }
+      if (now - lastStepAtRef.current >= STEP_INTERVAL_MS) {
+        lastStepAtRef.current = now
+        onStepRef.current?.()
+      }
+      const cur = posRef.current
+      let nextX = cur.x + dx * SPEED_X * dt
+      let nextY = cur.y + dy * SPEED_Y * dt
+
+      if (nextX >= EDGE_RIGHT && !lockXRef.current && dx > 0) {
+        lockXRef.current = true
+        onEdgeRef.current?.('right')
+        return true
+      }
+      if (nextX <= EDGE_LEFT && !lockXRef.current && dx < 0) {
+        lockXRef.current = true
+        onEdgeRef.current?.('left')
+        return true
+      }
+      if (nextY >= EDGE_BOTTOM && !lockYRef.current && dy > 0) {
+        lockYRef.current = true
+        onEdgeRef.current?.('down')
+        return true
+      }
+      if (nextY <= EDGE_TOP && !lockYRef.current && dy < 0) {
+        lockYRef.current = true
+        onEdgeRef.current?.('up')
+        return true
+      }
+      if (nextX < EDGE_RIGHT - 0.05 && nextX > EDGE_LEFT + 0.05) lockXRef.current = false
+      if (nextY < EDGE_BOTTOM - 0.05 && nextY > EDGE_TOP + 0.05) lockYRef.current = false
+
+      nextX = Math.max(EDGE_LEFT, Math.min(EDGE_RIGHT, nextX))
+      nextY = Math.max(EDGE_TOP, Math.min(EDGE_BOTTOM, nextY))
+      if (nextX !== cur.x || nextY !== cur.y) {
+        posRef.current = { x: nextX, y: nextY }
+        writeSurface(nextX, nextY)
+        maybeReactSync(nextX, nextY)
+        return true
+      }
+      return false
+    },
+    [blockedRef, maybeReactSync, stopLoop, writeSurface]
+  )
+
   const tick = useCallback(
     (now) => {
       const dt = Math.min(0.1, (now - lastTimeRef.current) / 1000)
@@ -76,52 +135,10 @@ export function useCharacter({ onEdge, onStep, blockedRef, surfaceRef }) {
         stopLoop()
         return
       }
-      if (dx !== 0 && dy !== 0) { dx *= DIAGONAL; dy *= DIAGONAL }
-      if (now - lastStepAtRef.current >= STEP_INTERVAL_MS) {
-        lastStepAtRef.current = now
-        onStepRef.current?.()
-      }
-      const cur = posRef.current
-      let nextX = cur.x + dx * SPEED_X * dt
-      let nextY = cur.y + dy * SPEED_Y * dt
-
-      if (nextX >= EDGE_RIGHT && !lockXRef.current && dx > 0) {
-        lockXRef.current = true
-        onEdgeRef.current?.('right')
-        frameRef.current = requestAnimationFrame(tick)
-        return
-      }
-      if (nextX <= EDGE_LEFT && !lockXRef.current && dx < 0) {
-        lockXRef.current = true
-        onEdgeRef.current?.('left')
-        frameRef.current = requestAnimationFrame(tick)
-        return
-      }
-      if (nextY >= EDGE_BOTTOM && !lockYRef.current && dy > 0) {
-        lockYRef.current = true
-        onEdgeRef.current?.('down')
-        frameRef.current = requestAnimationFrame(tick)
-        return
-      }
-      if (nextY <= EDGE_TOP && !lockYRef.current && dy < 0) {
-        lockYRef.current = true
-        onEdgeRef.current?.('up')
-        frameRef.current = requestAnimationFrame(tick)
-        return
-      }
-      if (nextX < EDGE_RIGHT - 0.05 && nextX > EDGE_LEFT + 0.05) lockXRef.current = false
-      if (nextY < EDGE_BOTTOM - 0.05 && nextY > EDGE_TOP + 0.05) lockYRef.current = false
-
-      nextX = Math.max(EDGE_LEFT, Math.min(EDGE_RIGHT, nextX))
-      nextY = Math.max(EDGE_TOP, Math.min(EDGE_BOTTOM, nextY))
-      if (nextX !== cur.x || nextY !== cur.y) {
-        posRef.current = { x: nextX, y: nextY }
-        writeSurface(nextX, nextY)
-        maybeReactSync(nextX, nextY)
-      }
+      applyMovement(dx, dy, dt, now)
       frameRef.current = requestAnimationFrame(tick)
     },
-    [blockedRef, writeSurface, maybeReactSync, stopLoop]
+    [blockedRef, applyMovement, stopLoop]
   )
 
   const startLoop = useCallback(() => {
@@ -192,5 +209,21 @@ export function useCharacter({ onEdge, onStep, blockedRef, surfaceRef }) {
     [blockedRef, startLoop]
   )
 
-  return { x: reactPos.x, y: reactPos.y, facing, placeAtSpawn, setHeld }
+  const releaseLocks = useCallback(() => {
+    lockXRef.current = false
+    lockYRef.current = false
+  }, [])
+
+  const moveDirect = useCallback(
+    (dir, dt) => {
+      const vector = DIR_TO_VECTOR[dir]
+      if (!vector) return false
+      if (dir === 'left') setFacing('left')
+      else if (dir === 'right') setFacing('right')
+      return applyMovement(vector.dx, vector.dy, dt)
+    },
+    [applyMovement]
+  )
+
+  return { x: reactPos.x, y: reactPos.y, facing, placeAtSpawn, setHeld, moveDirect, releaseLocks }
 }

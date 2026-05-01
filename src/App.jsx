@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { scenes } from './data/scenes'
 import { SCENE_DISCOVERIES } from './data/discoveries'
@@ -23,6 +23,7 @@ import NavHint from './components/NavHint'
 import EdgeMarkers from './components/EdgeMarkers'
 import VirtualDPad from './components/VirtualDPad'
 import Discoveries from './components/Discoveries'
+import BossChallengeButton from './components/BossChallengeButton'
 
 export default function App() {
   const partyRef = useRef(null)
@@ -32,6 +33,7 @@ export default function App() {
   const combatResetRef = useRef(() => {})
   const moveRef = useRef(() => {})
   const combatActiveRef = useRef(false)
+  const [activeEncounterSceneId, setActiveEncounterSceneId] = useState(null)
 
   const onCombatReset = useCallback(() => combatResetRef.current?.(), [])
   const sound = useSoundEffects()
@@ -66,14 +68,20 @@ export default function App() {
   })
   moveRef.current = game.move
 
+  const currentScene = scenes[game.currentSceneIndex]
   const isCombatActive = Boolean(game.activeCombatSceneId)
+  const isEncounterActive = activeEncounterSceneId === currentScene?.id
+  const isBattleVisualActive = isCombatActive || isEncounterActive
   useEffect(() => {
-    combatActiveRef.current = isCombatActive
-  }, [isCombatActive])
+    combatActiveRef.current = isBattleVisualActive
+  }, [isBattleVisualActive])
   const triggerAttackWithSound = useCallback(() => {
     playRef.current('attack')
     game.triggerAttack()
   }, [game])
+  const handleEncounterChange = useCallback((active) => {
+    setActiveEncounterSceneId(active ? currentScene.id : null)
+  }, [currentScene.id])
 
   const { slashes, impactWords, combatBolts, reset: resetCombatEffects } =
     useCombatEffects({
@@ -87,7 +95,6 @@ export default function App() {
     combatResetRef.current = resetCombatEffects
   }, [resetCombatEffects])
 
-  const currentScene = scenes[game.currentSceneIndex]
   useBgm({ mood: SCENE_BGM[currentScene.id], muted: sound.muted })
 
   useCombatInput(isCombatActive, triggerAttackWithSound)
@@ -110,15 +117,19 @@ export default function App() {
   const isCurrentMonsterCleared = Boolean(
     currentScene.monster && game.clearedMonsterMap[currentScene.id]
   )
-  const currentBossHp =
-    currentScene.monster?.mode === 'boss'
-      ? game.bossHpMap[currentScene.id] ?? currentScene.monster.hp
-      : undefined
+  const isBossScene = currentScene.monster?.mode === 'boss'
+  const currentBossHp = isBossScene
+    ? game.bossHpMap[currentScene.id] ?? currentScene.monster.hp
+    : undefined
+  const showBossChallenge =
+    isBossScene && !isCombatActive && !isCurrentMonsterCleared
 
   return (
     <div
       ref={surfaceRef}
-      className={`app-shell ${isCombatActive ? 'app-shell--combat' : ''}`}
+      className={`app-shell ${isBattleVisualActive ? 'app-shell--combat' : ''} ${
+        isEncounterActive ? 'app-shell--encounter' : ''
+      }`}
     >
       <Hud
         floor={currentScene.floor}
@@ -135,22 +146,32 @@ export default function App() {
         facing={character.facing}
         sceneIndex={game.currentSceneIndex}
         attackTrigger={game.attackTrigger}
-        isCombatActive={isCombatActive}
+        isCombatActive={isBattleVisualActive}
       />
       <Monster
         ref={monsterRef}
         monster={currentScene.monster}
         controlledHp={currentBossHp}
         onDefeat={() => {
+          setActiveEncounterSceneId(null)
+          character.releaseLocks()
           resetCombatEffects()
           game.handleMonsterDefeat(currentScene.id)
         }}
         isCombatActive={isCombatActive}
+        isEncounterActive={isEncounterActive}
         isCleared={isCurrentMonsterCleared}
         resetKey={currentScene.id}
+        onEncounterChange={handleEncounterChange}
+        hideForChallenge={showBossChallenge}
+      />
+      <BossChallengeButton
+        visible={showBossChallenge}
+        onChallenge={() => game.startBossCombat(currentScene.id)}
+        label={currentScene.monster?.isFinalBoss ? '최종 보스 도전!' : '도전하기'}
       />
 
-      <BattleOverlay isCombatActive={isCombatActive} attackTrigger={game.attackTrigger} />
+      <BattleOverlay isCombatActive={isBattleVisualActive} attackTrigger={game.attackTrigger} />
       <CombatPrompt
         isActive={isCombatActive}
         currentHp={currentBossHp}
@@ -164,7 +185,9 @@ export default function App() {
             key={scene.id}
             scene={scene}
             index={scenes.indexOf(scene)}
-            isCombatActive={game.activeCombatSceneId === scene.id}
+            isCombatActive={
+              game.activeCombatSceneId === scene.id || activeEncounterSceneId === scene.id
+            }
           />
         ))}
       </main>
@@ -173,17 +196,17 @@ export default function App() {
         items={SCENE_DISCOVERIES[currentScene.id]}
         characterX={character.x}
         characterY={character.y}
-        isCombatActive={isCombatActive}
+        isCombatActive={isBattleVisualActive}
       />
       <EdgeMarkers
-        isCombatActive={isCombatActive}
+        isCombatActive={isBattleVisualActive}
         nextDirection={currentScene.next?.direction || null}
         prevDirection={currentScene.prev?.direction || null}
         characterX={character.x}
         characterY={character.y}
       />
-      <NavHint isCombatActive={isCombatActive} />
-      <VirtualDPad isCombatActive={isCombatActive} />
+      <NavHint isCombatActive={isBattleVisualActive} />
+      <VirtualDPad isCombatActive={isBattleVisualActive} onMoveDirect={character.moveDirect} />
     </div>
   )
 }

@@ -249,6 +249,23 @@ body::after {
   line-height: 1.85;
   color: var(--color-text);
   margin-bottom: 1.5rem;
+  min-height: 5.55em;
+}
+
+.scene__body.is-typing::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 0.12em;
+  background: var(--color-accent);
+  vertical-align: -0.12em;
+  animation: type-caret 0.7s steps(2) infinite;
+}
+
+@keyframes type-caret {
+  0%, 45% { opacity: 1; }
+  46%, 100% { opacity: 0; }
 }
 
 .scene__transition {
@@ -535,6 +552,25 @@ body::after {
 
 .monster--auto { width: 56px; }
 
+.monster--ready {
+  pointer-events: auto;
+  animation: monster-spawn 0.5s ease-out;
+}
+
+.monster--encounter {
+  left: 50%;
+  right: auto;
+  bottom: 23vh;
+  translate: -50% 0;
+  z-index: 230;
+  width: clamp(160px, 18vw, 230px);
+  animation: monster-encounter-pop 0.32s ease-out, monster-hover 1.4s ease-in-out 0.32s infinite;
+}
+
+.monster--auto.monster--encounter {
+  width: clamp(150px, 16vw, 210px);
+}
+
 .monster--interactive {
   pointer-events: auto;
   cursor: pointer;
@@ -544,6 +580,19 @@ body::after {
 .monster--scroll {
   width: 110px;
   bottom: 16vh;
+}
+
+.monster--challenge {
+  right: 7vw;
+  bottom: 16vh;
+  width: 128px;
+  z-index: 120;
+  pointer-events: auto;
+}
+
+.monster--boss-final.monster--challenge {
+  width: 150px;
+  bottom: 17vh;
 }
 
 .monster--combat {
@@ -704,6 +753,210 @@ body::after {
   animation: hint-pulse 0.8s steps(2) infinite;
 }
 
+.monster__prompt {
+  margin-top: 0.45rem;
+  display: flex;
+  justify-content: center;
+}
+
+.monster__prompt--boss {
+  margin-top: 0.55rem;
+}
+
+.monster__fight-btn {
+  min-width: 4.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 2px solid var(--color-accent);
+  background: rgba(10, 6, 18, 0.9);
+  color: #fff7c2;
+  font-family: var(--font-pixel);
+  font-size: 0.48rem;
+  line-height: 1.3;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.monster__fight-btn--challenge {
+  min-width: 5.6rem;
+  padding-inline: 0.75rem;
+  background:
+    linear-gradient(180deg, rgba(255, 213, 74, 0.24), rgba(10, 6, 18, 0.94)),
+    rgba(10, 6, 18, 0.92);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.68),
+    0 0 18px rgba(255, 213, 74, 0.34);
+}
+
+.monster__fight-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.65);
+}
+
+/* ────────────────────────────────────────
+   보스 도전 버튼 — 메시지 박스 위 중앙, 무지개빛
+──────────────────────────────────────── */
+.boss-challenge {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 240;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  pointer-events: none;
+  animation: boss-challenge-fade 0.32s ease-out;
+}
+
+.boss-challenge__btn {
+  position: relative;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  color: #fff;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 6px rgba(0, 0, 0, 0.9);
+  padding: 0.95rem 1.8rem;
+  border: 3px solid #fff;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg,
+      #ff3b3b 0%,
+      #ffb13b 16%,
+      #ffe83b 32%,
+      #4cff5a 48%,
+      #3bb8ff 64%,
+      #8e3bff 80%,
+      #ff3bd0 100%);
+  background-size: 280% 280%;
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.55),
+    0 0 22px rgba(255, 213, 74, 0.7),
+    0 0 44px rgba(255, 85, 119, 0.55),
+    0 6px 0 rgba(0, 0, 0, 0.55);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  isolation: isolate;
+  animation:
+    boss-challenge-rainbow 4s linear infinite,
+    boss-challenge-bounce 1.4s ease-in-out infinite;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.boss-challenge__btn:hover {
+  filter: brightness(1.08);
+}
+
+.boss-challenge__btn:active {
+  transform: translateY(3px) scale(0.97);
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.55),
+    0 0 12px rgba(255, 213, 74, 0.7),
+    0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.boss-challenge__btn:focus-visible {
+  outline: 3px solid #fff7c2;
+  outline-offset: 4px;
+}
+
+.boss-challenge__label {
+  position: relative;
+  z-index: 2;
+}
+
+.boss-challenge__shine {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0) 70%,
+    transparent 100%
+  );
+  transform: skewX(-22deg);
+  pointer-events: none;
+  animation: boss-challenge-shine 2.4s ease-in-out infinite;
+  z-index: 1;
+}
+
+.boss-challenge__sparkle {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.55rem;
+  font-size: 1.1rem;
+  color: #fff7c2;
+  text-shadow: 0 0 10px #fff, 0 0 18px #ffd54a;
+  animation: boss-challenge-sparkle 1.6s ease-in-out infinite;
+  z-index: 3;
+}
+
+.boss-challenge__hint {
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: var(--color-accent);
+  text-shadow: 1px 1px 0 #000;
+  animation: hint-pulse 0.9s steps(2) infinite;
+}
+
+@keyframes boss-challenge-rainbow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes boss-challenge-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.03); }
+}
+
+@keyframes boss-challenge-shine {
+  0%   { left: -60%; }
+  60%  { left: 110%; }
+  100% { left: 110%; }
+}
+
+@keyframes boss-challenge-sparkle {
+  0%, 100% { transform: rotate(0) scale(1);   opacity: 1; }
+  50%      { transform: rotate(20deg) scale(1.3); opacity: 0.7; }
+}
+
+@keyframes boss-challenge-fade {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.92); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boss-challenge__btn,
+  .boss-challenge__shine,
+  .boss-challenge__sparkle {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .boss-challenge__btn {
+    font-size: 0.78rem;
+    padding: 0.8rem 1.4rem;
+    border-width: 2px;
+    letter-spacing: 0.14em;
+  }
+  .boss-challenge__hint { font-size: 0.45rem; }
+}
+
 @keyframes hint-pulse {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.4; }
@@ -729,6 +982,11 @@ body::after {
 @keyframes monster-spawn {
   from { opacity: 0; transform: scale(0.5); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes monster-encounter-pop {
+  from { opacity: 0; transform: scale(0.45) translateY(18px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes monster-hover {
@@ -1134,7 +1392,7 @@ body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 90;
+  z-index: 45;
 }
 
 .discovery {
@@ -1144,24 +1402,41 @@ body::after {
 
 .discovery__orb {
   display: block;
-  width: 14px;
-  height: 14px;
-  background: var(--color-accent);
-  border-radius: 50%;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #fff7c2 0%, var(--color-accent) 45%, #ff8c42 100%);
+  border: 2px solid #fff7c2;
+  border-radius: 2px;
+  transform: rotate(45deg);
   box-shadow:
-    0 0 0 3px rgba(0, 0, 0, 0.5),
-    0 0 14px rgba(255, 213, 74, 0.6);
+    0 0 0 3px rgba(0, 0, 0, 0.55),
+    0 0 16px rgba(255, 213, 74, 0.75),
+    3px 3px 0 rgba(0, 0, 0, 0.45);
   animation: discovery-pulse 1.6s ease-in-out infinite;
-  opacity: 0.55;
+  opacity: 0.88;
+}
+
+.discovery__orb::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
 }
 
 .discovery.is-active .discovery__orb {
   opacity: 1;
   animation-duration: 0.7s;
-  background: #fff;
+  background: linear-gradient(135deg, #ffffff 0%, #ffd54a 42%, #ff5577 100%);
+  border-color: #ffffff;
   box-shadow:
     0 0 0 3px rgba(0, 0, 0, 0.6),
-    0 0 24px rgba(255, 247, 194, 0.95);
+    0 0 26px rgba(255, 247, 194, 0.98),
+    0 0 48px rgba(255, 213, 74, 0.62);
 }
 
 .discovery__text {
@@ -1181,9 +1456,29 @@ body::after {
   animation: discovery-fade-in 0.22s ease-out;
 }
 
+.discovery-callout {
+  position: fixed;
+  z-index: 160;
+  left: 50%;
+  bottom: 6.5rem;
+  transform: translateX(-50%);
+  max-width: min(34rem, calc(100vw - 2rem));
+  padding: 0.65rem 0.85rem;
+  background: rgba(10, 6, 18, 0.88);
+  border: 2px solid rgba(255, 213, 74, 0.78);
+  color: var(--color-text);
+  font-family: var(--font-kr);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-align: center;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.55);
+  animation: discovery-fade-in 0.22s ease-out;
+}
+
 @keyframes discovery-pulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.25); }
+  0%, 100% { transform: rotate(45deg) scale(1); }
+  50%      { transform: rotate(45deg) scale(1.22); }
 }
 
 @keyframes discovery-fade-in {
@@ -1193,6 +1488,16 @@ body::after {
 
 @media (max-width: 600px) {
   .discovery__text { font-size: 0.5rem; max-width: 60vw; white-space: normal; }
+  .discovery-callout {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 13rem);
+    transform: none;
+    max-width: none;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    padding: 0.55rem 0.65rem;
+  }
 }
 
 /* ────────────────────────────────────────
@@ -1200,10 +1505,13 @@ body::after {
 ──────────────────────────────────────── */
 .edge-marker {
   position: fixed;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: center;
+  gap: 0.5rem;
   font-family: var(--font-pixel);
+  line-height: 1;
+  text-align: center;
   text-shadow: 3px 3px 0 #000;
   pointer-events: none;
   z-index: 105;
@@ -1212,11 +1520,55 @@ body::after {
 
 .edge-marker--left  { left: 1rem; top: 50%; transform: translateY(-50%); }
 .edge-marker--right { right: 1rem; top: 50%; transform: translateY(-50%); }
-.edge-marker--up    { top: 1rem; left: 50%; transform: translateX(-50%); flex-direction: column; }
-.edge-marker--down  { bottom: 1rem; left: 50%; transform: translateX(-50%); flex-direction: column; }
+.edge-marker--up    { right: 1rem; top: 6rem; }
+.edge-marker--down  { right: 1rem; bottom: 6rem; }
 
-.edge-marker__arrow { font-size: 2rem; line-height: 1; }
-.edge-marker__label { font-size: 0.6rem; letter-spacing: 0.2em; }
+.edge-marker__arrow {
+  flex: 0 0 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.edge-marker__label {
+  flex: 1 1 auto;
+  display: inline-block;
+  min-width: 3rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-align: center;
+}
+
+.edge-marker__arrow::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  filter: drop-shadow(2px 2px 0 #000);
+}
+
+.edge-marker__arrow--right::before {
+  border-width: 0.45rem 0 0.45rem 0.6rem;
+  border-color: transparent transparent transparent currentColor;
+}
+.edge-marker__arrow--left::before {
+  border-width: 0.45rem 0.6rem 0.45rem 0;
+  border-color: transparent currentColor transparent transparent;
+}
+.edge-marker__arrow--up::before {
+  border-width: 0 0.45rem 0.6rem 0.45rem;
+  border-color: transparent transparent currentColor transparent;
+}
+.edge-marker__arrow--down::before {
+  border-width: 0.6rem 0.45rem 0 0.45rem;
+  border-color: currentColor transparent transparent transparent;
+}
 
 /* 공통 박스 — NEXT/PREV 정렬을 위해 동일 사이즈 */
 .edge-marker--next,
@@ -1225,7 +1577,8 @@ body::after {
   border: 2px solid;
   border-radius: 10px;
   padding: 0.4rem 0.6rem;
-  min-width: 4.5rem;
+  min-width: 6rem;
+  box-sizing: border-box;
 }
 
 /* NEXT — 황금 강조 */
@@ -1264,15 +1617,52 @@ body::after {
   }
 }
 
-/* up/down 마커는 가로 회전 무관하게 동일 스케일 */
-.edge-marker--next.edge-marker--up,
-.edge-marker--next.edge-marker--down {
-  transform: translateX(-50%);
-}
-
-/* 모바일에선 D-pad가 모든 방향 안내 → edge marker 숨김 */
+/* 모바일에선 D-pad 위에 작은 진행 칩으로 표시 */
 @media (hover: none) and (pointer: coarse), (max-width: 600px) {
-  .edge-marker { display: none; }
+  .edge-marker {
+    display: inline-flex;
+    left: auto;
+    right: 0.75rem;
+    top: auto;
+    bottom: auto;
+    transform: none;
+    gap: 0.35rem;
+    z-index: 205;
+  }
+  .edge-marker--next {
+    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 13.1rem);
+  }
+  .edge-marker--prev {
+    bottom: calc(max(2.5rem, env(safe-area-inset-bottom, 0) + 1.5rem) + 15.75rem);
+  }
+  .edge-marker--next,
+  .edge-marker--prev {
+    min-width: 5.1rem;
+    padding: 0.35rem 0.45rem;
+    border-radius: 8px;
+  }
+  .edge-marker__arrow {
+    flex: 0 0 0.95rem;
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+  .edge-marker__arrow--right::before {
+    border-width: 0.35rem 0 0.35rem 0.45rem;
+  }
+  .edge-marker__arrow--left::before {
+    border-width: 0.35rem 0.45rem 0.35rem 0;
+  }
+  .edge-marker__arrow--up::before {
+    border-width: 0 0.35rem 0.45rem 0.35rem;
+  }
+  .edge-marker__arrow--down::before {
+    border-width: 0.45rem 0.35rem 0 0.35rem;
+  }
+  .edge-marker__label {
+    min-width: 2.65rem;
+    font-size: 0.45rem;
+    letter-spacing: 0.08em;
+  }
 }
 
 
@@ -1453,7 +1843,10 @@ body::after {
   .hud__panel { padding: 0.35rem 0.5rem; border-width: 1px; }
   .hud__mute { padding: 0.35rem 0.5rem; }
   .attribution { font-size: 0.4rem; bottom: 0.3rem; left: 0.4rem; }
-  .party { gap: 2px; bottom: 10vh; }
+  .party {
+    gap: 2px;
+    bottom: calc(10vh + (1 - var(--character-y, 1)) * 74vh);
+  }
   .party__member { width: 36px; height: 54px; }
   .party--combat { gap: 4px; bottom: 8vh; }
   .party--combat .party__member { width: 48px; height: 72px; }
@@ -1461,6 +1854,22 @@ body::after {
   .monster { right: 6vw; width: 56px; bottom: 11vh; }
   .monster--auto { width: 40px; }
   .monster--interactive { width: 70px; }
+  .monster--encounter,
+  .monster--auto.monster--encounter {
+    left: 50%;
+    right: auto;
+    bottom: 25vh;
+    width: min(42vw, 170px);
+  }
+  .monster--challenge {
+    right: 3vw;
+    bottom: 14vh;
+    width: min(31vw, 120px);
+  }
+  .monster--boss-final.monster--challenge {
+    width: min(34vw, 132px);
+    bottom: 15vh;
+  }
   .monster--scroll.monster--combat { width: 100px; right: 4vw; bottom: 9vh; }
   .monster--boss-final { width: 90px; }
   .monster--boss-final.monster--combat { width: 120px; }
