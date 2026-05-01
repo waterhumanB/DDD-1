@@ -84,7 +84,6 @@ const Monster = forwardRef(function Monster(
   }, [resetKey, onEncounterChange])
 
   if (!monster) return null
-  if (isAuto) return null
   if (hideForChallenge) return null
 
   const Sprite = monsterSprites[monster.sprite] || monsterSprites.slime
